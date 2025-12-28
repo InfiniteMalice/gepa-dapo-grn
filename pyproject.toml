@@ -1,9 +1,10 @@
 [project]
 name = "gepa-dapo-grn"
 version = "0.1.0"
-description = "Baseline Python repository scaffold."
+description = "GEPA-aware DAPO RL library with optional GRN modules."
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = ["torch"]
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]
