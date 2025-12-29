@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import warnings
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -60,7 +61,9 @@ def _broadcast_rewards(rewards: torch.Tensor, target: torch.Tensor) -> torch.Ten
         return rewards.view(shape).expand_as(target)
     if rewards.ndim > target.ndim:
         raise ValueError("rewards cannot have higher rank than target for broadcasting")
-    return rewards
+    trailing_dims = target.ndim - rewards.ndim
+    shape = rewards.shape + (1,) * trailing_dims
+    return rewards.view(shape).expand_as(target)
 
 
 _FEEDBACK_BATCH_MISMATCH = "feedbacks must align with batch size"
@@ -166,6 +169,12 @@ class DAPOTrainer:
             if returns.shape == outputs.values.shape:
                 advantages = returns - outputs.values
                 value_loss = self._compute_value_loss(outputs.values, returns)
+            else:
+                warnings.warn(
+                    "Value head shape mismatch; skipping value loss computation.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
         if self.config.group_size:
             flat_adv = advantages.view(-1)
@@ -207,8 +216,8 @@ class DAPOTrainer:
         return {
             "policy": self.policy.state_dict(),
             "optimizer": self.optimizer.state_dict(),
-            "config": self.config,
-            "grn_config": self.grn_config,
+            "config": asdict(self.config),
+            "grn_config": asdict(self.grn_config),
             "curriculum_state": self.curriculum.tasks,
             "safety_state": {
                 "reward_ema": self.safety_controller.state.reward_ema,
@@ -223,9 +232,13 @@ class DAPOTrainer:
         self.policy.load_state_dict(state["policy"])
         self.optimizer.load_state_dict(state["optimizer"])
         if "config" in state:
-            self.config = state["config"]
+            config_state = state["config"]
+            self.config = (
+                DAPOConfig(**config_state) if isinstance(config_state, dict) else config_state
+            )
         if "grn_config" in state:
-            self.grn_config = state["grn_config"]
+            grn_state = state["grn_config"]
+            self.grn_config = GRNConfig(**grn_state) if isinstance(grn_state, dict) else grn_state
         if "curriculum_state" in state:
             self.curriculum.tasks = state["curriculum_state"]
         if "safety_state" in state:

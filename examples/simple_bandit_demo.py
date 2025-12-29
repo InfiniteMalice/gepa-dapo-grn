@@ -90,10 +90,11 @@ def main() -> None:
     for step in range(20):
         batch_size = 6
         inputs = {"batch_size": batch_size}
-        logits = policy(**inputs).logits
-        probs = torch.softmax(logits, dim=-1)
-        actions = torch.multinomial(probs, num_samples=1).squeeze(-1)
-        logp_old = policy.logprobs(actions, **inputs)
+        with torch.no_grad():
+            logits = policy(**inputs).logits
+            probs = torch.softmax(logits, dim=-1)
+            actions = torch.multinomial(probs, num_samples=1).squeeze(-1)
+            logp_old = policy.logprobs(actions, **inputs)
 
         feedbacks = [feedback_for_action(int(action), task_id) for action in actions]
         batch = DAPOBatch(inputs=inputs, actions=actions, logp_old=logp_old)
