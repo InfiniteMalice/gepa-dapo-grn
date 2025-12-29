@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 from torch import nn
 
-from gepa_dapo_grn.config import DAPOConfig
+from gepa_dapo_grn.config import DAPOConfig, GRNConfig, RewardMixerConfig
+from gepa_dapo_grn.curriculum import CurriculumTracker
+from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
+from gepa_dapo_grn.grn import maybe_wrap_policy_heads, restore_policy_heads
 from gepa_dapo_grn.policy_interfaces import Policy
+from gepa_dapo_grn.reward_mixers import mix_reward_vectors
+from gepa_dapo_grn.safety_controller import SafetyController
 
 
 @dataclass
@@ -19,8 +24,6 @@ class DAPOBatch:
     inputs: Dict[str, torch.Tensor]
     actions: torch.Tensor
     logp_old: torch.Tensor
-    advantages: torch.Tensor
-    returns: Optional[torch.Tensor] = None
 
 
 @dataclass
@@ -49,25 +52,57 @@ def _approx_kl(logp_new: torch.Tensor, logp_ref: torch.Tensor) -> torch.Tensor:
     return (logp_new - logp_ref).mean()
 
 
+def _broadcast_rewards(rewards: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    if rewards.ndim == target.ndim:
+        return rewards
+    if rewards.ndim == 1 and target.ndim > 1:
+        shape = (rewards.shape[0],) + (1,) * (target.ndim - 1)
+        return rewards.view(shape).expand_as(target)
+    if rewards.ndim > target.ndim:
+        raise ValueError("rewards cannot have higher rank than target for broadcasting")
+    return rewards
+
+
+_FEEDBACK_BATCH_MISMATCH = "feedbacks must align with batch size"
+
+
 class DAPOTrainer:
-    """Decoupled Advantage Policy Optimization trainer."""
+    """Decoupled Advantage Policy Optimization trainer with GEPA feedback support."""
 
     def __init__(
         self,
         policy: Policy,
         optimizer: torch.optim.Optimizer,
         config: Optional[DAPOConfig] = None,
+        grn_config: Optional[GRNConfig] = None,
+        reward_mixer: Optional[RewardMixerConfig] = None,
+        curriculum: Optional[CurriculumTracker] = None,
+        safety_controller: Optional[SafetyController] = None,
     ) -> None:
         self.policy = policy
         self.optimizer = optimizer
         self.config = config or DAPOConfig()
-        self.kl_coeff = self.config.kl_coeff
+        self.grn_config = grn_config or GRNConfig()
+        self.reward_mixer = reward_mixer or RewardMixerConfig()
+        self.curriculum = curriculum or CurriculumTracker()
+        self.safety_controller = safety_controller or SafetyController()
         self.ref_policy = policy.clone()
+        self._original_heads: Dict[str, nn.Module] = {}
+        self._sync_grn_wrapping()
 
     def update_reference(self) -> None:
         """Refresh the reference policy used for KL regularization."""
 
         self.ref_policy = self.policy.clone()
+
+    def _sync_grn_wrapping(self) -> None:
+        if self.grn_config.enabled:
+            if not self._original_heads:
+                self._original_heads = maybe_wrap_policy_heads(self.policy, self.grn_config)
+        else:
+            if self._original_heads:
+                restore_policy_heads(self.policy, self._original_heads)
+                self._original_heads = {}
 
     def _compute_policy_loss(
         self,
@@ -93,32 +128,53 @@ class DAPOTrainer:
         multiplier = torch.exp(
             torch.tensor((kl_value - self.config.target_kl) / self.config.kl_horizon)
         ).item()
-        self.kl_coeff *= multiplier
+        self.config.kl_coeff *= multiplier
 
     def train_step(
         self,
         batch: DAPOBatch,
+        feedbacks: List[GEPAFeedback],
         extra_loss: Optional[torch.Tensor] = None,
     ) -> DAPOStepResult:
         """Run a single DAPO training step."""
 
+        if len(feedbacks) != batch.actions.shape[0]:
+            raise ValueError(_FEEDBACK_BATCH_MISMATCH)
+
+        for feedback in feedbacks:
+            task_id = feedback.meta.get("task_id", "default")
+            self.curriculum.update(task_id, feedback)
+            self.safety_controller.update(feedback)
+
+        self.safety_controller.adjust_configs(self.config, self.grn_config)
+        self._sync_grn_wrapping()
+
+        reward_vectors = [feedback.rewards for feedback in feedbacks]
+        scalar_rewards, reward_stats = mix_reward_vectors(reward_vectors, self.reward_mixer)
+
         self.policy.train()
         outputs = self.policy(**batch.inputs)
-        logp_new = self.policy.log_probs(batch.actions, **batch.inputs)
+        logp_new = self.policy.logprobs(batch.actions, **batch.inputs)
         with torch.no_grad():
-            logp_ref = self.ref_policy.log_probs(batch.actions, **batch.inputs)
+            logp_ref = self.ref_policy.logprobs(batch.actions, **batch.inputs)
 
-        advantages = batch.advantages
+        rewards_for_adv = _broadcast_rewards(scalar_rewards, logp_new)
+        advantages = rewards_for_adv
+        value_loss = torch.tensor(0.0, device=logp_new.device)
+        if outputs.values is not None:
+            returns = _broadcast_rewards(scalar_rewards, outputs.values)
+            if returns.shape == outputs.values.shape:
+                advantages = returns - outputs.values
+                value_loss = self._compute_value_loss(outputs.values, returns)
+
         if self.config.group_size:
-            advantages = _group_normalize(advantages, self.config.group_size)
+            flat_adv = advantages.view(-1)
+            normalized = _group_normalize(flat_adv, self.config.group_size)
+            advantages = normalized.view_as(advantages)
 
         policy_loss = self._compute_policy_loss(logp_new, batch.logp_old, advantages)
         kl_value = _approx_kl(logp_new, logp_ref)
-        kl_loss = self.kl_coeff * kl_value
-
-        value_loss = torch.tensor(0.0, device=logp_new.device)
-        if outputs.values is not None and batch.returns is not None:
-            value_loss = self._compute_value_loss(outputs.values, batch.returns)
+        kl_loss = self.config.kl_coeff * kl_value
 
         total_loss = policy_loss + kl_loss + self.config.value_coef * value_loss
         if extra_loss is not None:
@@ -137,8 +193,12 @@ class DAPOTrainer:
             "loss/value": value_loss.item() if value_loss.numel() else 0.0,
             "loss/kl": kl_loss.item(),
             "kl/value": kl_value.item(),
-            "kl/coeff": self.kl_coeff,
+            "kl/coeff": self.config.kl_coeff,
+            "reward/mean": scalar_rewards.mean().item(),
+            "reward/std": scalar_rewards.std().item(),
         }
+        metrics.update(reward_stats)
+        metrics.update(self.safety_controller.describe())
         return DAPOStepResult(loss=total_loss, metrics=metrics)
 
     def state_dict(self) -> Dict[str, Any]:
@@ -147,7 +207,8 @@ class DAPOTrainer:
         return {
             "policy": self.policy.state_dict(),
             "optimizer": self.optimizer.state_dict(),
-            "kl_coeff": self.kl_coeff,
+            "config": self.config,
+            "grn_config": self.grn_config,
         }
 
     def load_state_dict(self, state: Dict[str, Any]) -> None:
@@ -155,4 +216,8 @@ class DAPOTrainer:
 
         self.policy.load_state_dict(state["policy"])
         self.optimizer.load_state_dict(state["optimizer"])
-        self.kl_coeff = float(state["kl_coeff"])
+        if "config" in state:
+            self.config = state["config"]
+        if "grn_config" in state:
+            self.grn_config = state["grn_config"]
+        self._sync_grn_wrapping()
