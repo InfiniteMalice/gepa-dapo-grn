@@ -43,4 +43,4 @@ def test_curriculum_tracker_decay_bounds() -> None:
             CurriculumTracker(decay=decay)
         except ValueError:
             continue
-        assert False, "Expected ValueError for invalid decay"
+        raise AssertionError(f"Expected ValueError for invalid decay={decay}")

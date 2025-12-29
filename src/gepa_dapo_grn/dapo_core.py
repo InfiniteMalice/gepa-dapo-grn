@@ -209,6 +209,12 @@ class DAPOTrainer:
             "optimizer": self.optimizer.state_dict(),
             "config": self.config,
             "grn_config": self.grn_config,
+            "curriculum_state": self.curriculum.tasks,
+            "safety_state": {
+                "reward_ema": self.safety_controller.state.reward_ema,
+                "tag_ema": self.safety_controller.state.tag_ema,
+                "count": self.safety_controller.state.count,
+            },
         }
 
     def load_state_dict(self, state: Dict[str, Any]) -> None:
@@ -220,4 +226,11 @@ class DAPOTrainer:
             self.config = state["config"]
         if "grn_config" in state:
             self.grn_config = state["grn_config"]
+        if "curriculum_state" in state:
+            self.curriculum.tasks = state["curriculum_state"]
+        if "safety_state" in state:
+            safety = state["safety_state"]
+            self.safety_controller.state.reward_ema = safety.get("reward_ema", {})
+            self.safety_controller.state.tag_ema = safety.get("tag_ema", {})
+            self.safety_controller.state.count = safety.get("count", 0)
         self._sync_grn_wrapping()
