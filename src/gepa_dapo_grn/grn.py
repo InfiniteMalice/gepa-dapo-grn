@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
 import torch
 from torch import nn
@@ -15,7 +15,7 @@ class GlobalResponseNorm(nn.Module):
     """Normalize activations by global feature norm with a learnable scale.
 
     This module rescales activations based on the L2 norm across the feature
-    dimension. The scale is a learnable parameter (scalar by default).
+    dimension. The scale is a learnable parameter.
     """
 
     def __init__(self, epsilon: float = 1e-6) -> None:
@@ -46,6 +46,8 @@ def wrap_head_with_grn(head: nn.Module, config: GRNConfig) -> nn.Module:
 
     if not config.enabled:
         return head
+    if isinstance(head, GRNWrappedHead):
+        return head
     return GRNWrappedHead(head, GlobalResponseNorm(epsilon=config.epsilon))
 
 
@@ -73,6 +75,40 @@ def maybe_apply_grn(
 
         builder = _builder
     return builder(head)
+
+
+def maybe_wrap_policy_heads(
+    policy: nn.Module,
+    config: GRNConfig,
+    policy_attr: str = "policy_head",
+    value_attr: str = "value_head",
+) -> Dict[str, nn.Module]:
+    """Wrap policy/value heads with GRN when configured.
+
+    Returns a mapping of attribute names to original modules for restoration.
+    """
+
+    originals: Dict[str, nn.Module] = {}
+    if not config.enabled:
+        return originals
+    if config.apply_to_policy and hasattr(policy, policy_attr):
+        head = getattr(policy, policy_attr)
+        if not isinstance(head, GRNWrappedHead):
+            originals[policy_attr] = head
+            setattr(policy, policy_attr, wrap_head_with_grn(head, config))
+    if config.apply_to_value and hasattr(policy, value_attr):
+        head = getattr(policy, value_attr)
+        if not isinstance(head, GRNWrappedHead):
+            originals[value_attr] = head
+            setattr(policy, value_attr, wrap_head_with_grn(head, config))
+    return originals
+
+
+def restore_policy_heads(policy: nn.Module, originals: Dict[str, nn.Module]) -> None:
+    """Restore policy/value heads to their original modules."""
+
+    for attr, module in originals.items():
+        setattr(policy, attr, module)
 
 
 def describe_grn_config(config: GRNConfig) -> dict:
