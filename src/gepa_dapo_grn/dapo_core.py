@@ -173,6 +173,7 @@ class DAPOTrainer:
                 warnings.warn(
                     "Value head shape mismatch; skipping value loss computation.",
                     RuntimeWarning,
+                    stacklevel=2,
                 )
 
         if self.config.group_size:
