@@ -1,4 +1,4 @@
-"""Toy language-model reasoning example with DAPO and vector rewards."""
+"""Toy language-model reasoning example with DAPO, GEPA feedback, and GRN."""
 
 from __future__ import annotations
 
@@ -9,11 +9,13 @@ import torch
 from transformers import GPT2Config, GPT2LMHeadModel
 
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig, RewardMixerConfig
+from gepa_dapo_grn.curriculum import CurriculumTracker
 from gepa_dapo_grn.dapo_core import DAPOBatch, DAPOTrainer
+from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 from gepa_dapo_grn.grn import maybe_apply_grn
+from gepa_dapo_grn.integration.hf_lm import HuggingFaceLMPolicy
 from gepa_dapo_grn.logging_utils import MetricsLogger
-from gepa_dapo_grn.policy_interfaces import HuggingFaceLMPolicy
-from gepa_dapo_grn.reward_mixers import mix_reward_vectors
+from gepa_dapo_grn.safety_controller import SafetyController
 
 
 @dataclass
@@ -41,10 +43,16 @@ def build_prompts() -> List[Tuple[str, int]]:
     return prompts
 
 
-def reward_vector(prediction: int, target: int) -> Dict[str, float]:
+def feedback_for_prediction(prediction: int, target: int, task_id: str) -> GEPAFeedback:
     correct = float(prediction == target)
     distance = -abs(prediction - target)
-    return {"accuracy": correct, "distance": distance, "brevity": 1.0}
+    calibration_error = abs(prediction - target) / 10.0
+    return GEPAFeedback(
+        rewards={"truth": correct, "distance": distance, "brevity": 1.0},
+        tags={"calibration_error": calibration_error, "harmlessness": 1.0},
+        meta={"task_id": task_id},
+        abstained=False,
+    )
 
 
 def main() -> None:
@@ -66,11 +74,27 @@ def main() -> None:
     policy = HuggingFaceLMPolicy(model, tokenizer)
     optimizer = torch.optim.Adam(policy.parameters(), lr=2e-4)
 
-    trainer = DAPOTrainer(policy, optimizer, DAPOConfig())
-    mixer_config = RewardMixerConfig(weights={"accuracy": 1.0, "distance": 0.2, "brevity": 0.05})
+    mixer_config = RewardMixerConfig(weights={"truth": 1.0, "distance": 0.2, "brevity": 0.05})
+    curriculum = CurriculumTracker(
+        decay=0.9,
+        reward_weights={"truth": 1.0},
+        tag_weights={"calibration_error": -1.0},
+    )
+    safety = SafetyController(tag_risk_weights={"calibration_error": 1.0})
+
+    trainer = DAPOTrainer(
+        policy,
+        optimizer,
+        DAPOConfig(),
+        grn_config=grn_config,
+        reward_mixer=mixer_config,
+        curriculum=curriculum,
+        safety_controller=safety,
+    )
 
     prompts = build_prompts()
     logger = MetricsLogger(prefix="train")
+    task_id = "toy-lm"
 
     for step in range(30):
         batch_inputs = []
@@ -93,29 +117,22 @@ def main() -> None:
         actions = input_ids.clone()
         actions[:, -1] = actions_last
         with torch.no_grad():
-            logp_old = policy.log_probs(actions, **inputs)
+            logp_old = policy.logprobs(actions, **inputs)
 
-        reward_vectors = [
-            reward_vector(int(actions_last[idx]), target)
+        feedbacks = [
+            feedback_for_prediction(int(actions_last[idx]), target, task_id)
             for idx, target in enumerate(batch_targets)
         ]
-        scalar_rewards, reward_stats = mix_reward_vectors(reward_vectors, mixer_config)
-        advantages = scalar_rewards - scalar_rewards.mean()
-
-        advantages_full = torch.zeros_like(logp_old)
-        advantages_full[:, -1] = advantages
 
         batch = DAPOBatch(
             inputs=inputs,
             actions=actions,
             logp_old=logp_old,
-            advantages=advantages_full,
         )
-        result = trainer.train_step(batch)
+        result = trainer.train_step(batch, feedbacks)
 
-        metrics = {**reward_stats, **result.metrics}
         if step % 10 == 0:
-            logger.log(metrics)
+            logger.log(result.metrics)
 
 
 if __name__ == "__main__":
