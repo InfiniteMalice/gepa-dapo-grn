@@ -35,6 +35,12 @@ class HuggingFaceLMPolicy(Policy):
         return torch.gather(log_probs, dim=-1, index=actions.unsqueeze(-1)).squeeze(-1)
 
     def clone(self) -> "HuggingFaceLMPolicy":
+        """Clone the policy for reference use.
+
+        Note: deep copies of large LMs can be memory intensive; consider providing
+        a lighter-weight cloning strategy for production deployments.
+        """
+
         cloned = copy.deepcopy(self)
         cloned.eval()
         for param in cloned.parameters():
@@ -56,4 +62,7 @@ class HuggingFaceLMPolicy(Policy):
     def device(self) -> torch.device:
         """Return the primary device for the policy."""
 
-        return next(self.parameters()).device
+        param = next(self.parameters(), None)
+        if param is not None:
+            return param.device
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")

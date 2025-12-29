@@ -58,7 +58,12 @@ def _broadcast_rewards(rewards: torch.Tensor, target: torch.Tensor) -> torch.Ten
     if rewards.ndim == 1 and target.ndim > 1:
         shape = (rewards.shape[0],) + (1,) * (target.ndim - 1)
         return rewards.view(shape).expand_as(target)
+    if rewards.ndim > target.ndim:
+        raise ValueError("rewards cannot have higher rank than target for broadcasting")
     return rewards
+
+
+_FEEDBACK_BATCH_MISMATCH = "feedbacks must align with batch size"
 
 
 class DAPOTrainer:
@@ -134,7 +139,7 @@ class DAPOTrainer:
         """Run a single DAPO training step."""
 
         if len(feedbacks) != batch.actions.shape[0]:
-            raise ValueError("feedbacks must align with batch size")
+            raise ValueError(_FEEDBACK_BATCH_MISMATCH)
 
         for feedback in feedbacks:
             task_id = feedback.meta.get("task_id", "default")

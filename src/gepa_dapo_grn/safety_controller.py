@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig
+from gepa_dapo_grn.ema_utils import update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -47,18 +48,15 @@ class SafetyController:
         self._baseline_kl_coeff: Optional[float] = None
         self._baseline_grn_enabled: Optional[bool] = None
 
-    def _update_ema(self, current: float, value: float) -> float:
-        return self.decay * current + (1.0 - self.decay) * value
-
     def update(self, feedback: GEPAFeedback) -> SafetyState:
         """Update EMA statistics based on feedback."""
 
         for key, value in feedback.rewards.items():
             current = self.state.reward_ema.get(key, float(value))
-            self.state.reward_ema[key] = self._update_ema(current, float(value))
+            self.state.reward_ema[key] = update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = self.state.tag_ema.get(key, float(value))
-            self.state.tag_ema[key] = self._update_ema(current, float(value))
+            self.state.tag_ema[key] = update_ema(current, float(value), self.decay)
         self.state.count += 1
         return self.state
 

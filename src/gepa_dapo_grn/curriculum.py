@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Optional
 
+from gepa_dapo_grn.ema_utils import update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -39,20 +41,21 @@ class CurriculumTracker:
         self.weight_fn = weight_fn
         self.tasks: Dict[str, TaskStats] = {}
 
-    def _update_ema(self, current: float, value: float) -> float:
-        return self.decay * current + (1.0 - self.decay) * value
-
     def update(self, task_id: str, feedback: GEPAFeedback) -> TaskStats:
         """Update EMA statistics for a task based on new feedback."""
 
         stats = self.tasks.setdefault(task_id, TaskStats())
         for key, value in feedback.rewards.items():
             current = stats.reward_ema.get(key, float(value))
-            stats.reward_ema[key] = self._update_ema(current, float(value))
+            stats.reward_ema[key] = update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = stats.tag_ema.get(key, float(value))
-            stats.tag_ema[key] = self._update_ema(current, float(value))
-        stats.abstention_ema = self._update_ema(stats.abstention_ema, float(feedback.abstained))
+            stats.tag_ema[key] = update_ema(current, float(value), self.decay)
+        stats.abstention_ema = update_ema(
+            stats.abstention_ema,
+            float(feedback.abstained),
+            self.decay,
+        )
         stats.count += 1
         return stats
 
@@ -81,7 +84,10 @@ class CurriculumTracker:
         if self.weight_fn is not None:
             return max(0.0, float(self.weight_fn(stats)))
         score = self._weighted_score(stats)
-        return math.exp(score)
+        if not math.isfinite(score):
+            return math.exp(700.0) if score > 0.0 else 0.0
+        max_score = min(700.0, math.log(sys.float_info.max))
+        return math.exp(min(score, max_score))
 
     def describe_task(self, task_id: str) -> Dict[str, float]:
         """Return a summary of EMA statistics for a task."""

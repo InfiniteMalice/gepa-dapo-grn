@@ -21,3 +21,26 @@ def test_curriculum_tracker_updates_and_weight() -> None:
     assert stats["tag_ema/deception"] > 0.0
     weight = tracker.sample_weight("task-a")
     assert weight > 0.0
+
+
+def test_curriculum_tracker_decay_and_weight_override() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(rewards={"truth": 1.0}, meta={"task_id": "task-a"})
+    tracker.update("task-a", feedback)
+    tracker.update("task-a", GEPAFeedback(rewards={"truth": 0.0}, meta={"task_id": "task-a"}))
+    stats = tracker.describe_task("task-a")
+    assert 0.0 < stats["reward_ema/truth"] < 1.0
+
+    custom_tracker = CurriculumTracker(decay=0.5, weight_fn=lambda _: 2.5)
+    custom_tracker.update("task-a", feedback)
+    assert custom_tracker.sample_weight("task-a") == 2.5
+    assert custom_tracker.sample_weight("unknown") == 1.0
+
+
+def test_curriculum_tracker_decay_bounds() -> None:
+    for decay in (0.0, 1.0, -0.1, 1.1):
+        try:
+            CurriculumTracker(decay=decay)
+        except ValueError:
+            continue
+        assert False, "Expected ValueError for invalid decay"
