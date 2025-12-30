@@ -40,7 +40,7 @@ def _group_normalize(values: torch.Tensor, group_size: int) -> torch.Tensor:
         raise ValueError("Batch size must be divisible by group_size")
     grouped = values.view(-1, group_size)
     mean = grouped.mean(dim=1, keepdim=True)
-    std = grouped.std(dim=1, keepdim=True).clamp_min(1e-6)
+    std = grouped.std(dim=1, keepdim=True, unbiased=False).clamp_min(1e-6)
     normalized = (grouped - mean) / std
     return normalized.view(-1)
 
@@ -204,7 +204,7 @@ class DAPOTrainer:
             "kl/value": kl_value.item(),
             "kl/coeff": self.config.kl_coeff,
             "reward/mean": scalar_rewards.mean().item(),
-            "reward/std": scalar_rewards.std().item(),
+            "reward/std": scalar_rewards.std(unbiased=False).item(),
         }
         metrics.update(reward_stats)
         metrics.update(self.safety_controller.describe())

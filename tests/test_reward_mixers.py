@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from gepa_dapo_grn.config import RewardMixerConfig
@@ -16,3 +17,13 @@ def test_reward_mixer_weights_and_clipping() -> None:
     assert torch.allclose(scalar, clipped)
     assert stats["reward_weight/a"] == 1.0
     assert stats["reward_weight/b"] == 2.0
+
+
+def test_reward_mixer_single_sample_normalization_is_finite() -> None:
+    reward_vectors = [{"quality": 3.0}]
+    config = RewardMixerConfig(normalize=True)
+    scalar, stats = mix_reward_vectors(reward_vectors, config)
+    assert torch.isfinite(scalar).all()
+    assert stats["reward_mean/quality"] == 3.0
+    assert stats["reward_std/quality"] == pytest.approx(1e-6)
+    assert stats["reward_scalar/std"] == 0.0

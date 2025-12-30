@@ -55,7 +55,7 @@ def mix_reward_vectors(
     stats: Dict[str, float] = {}
     if config.normalize:
         mean = rewards.mean(dim=0, keepdim=True)
-        std = rewards.std(dim=0, keepdim=True).clamp_min(1e-6)
+        std = rewards.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-6)
         rewards = (rewards - mean) / std
         stats.update({f"reward_mean/{key}": mean[0, idx].item() for idx, key in enumerate(keys)})
         stats.update({f"reward_std/{key}": std[0, idx].item() for idx, key in enumerate(keys)})
@@ -68,7 +68,7 @@ def mix_reward_vectors(
 
     stats.update({f"reward_weight/{key}": weight for key, weight in zip(keys, weights.tolist())})
     stats["reward_scalar/mean"] = scalar.mean().item()
-    stats["reward_scalar/std"] = scalar.std().item()
+    stats["reward_scalar/std"] = scalar.std(unbiased=False).item()
     return scalar, stats
 
 
