@@ -71,3 +71,21 @@ def test_kl_coeff_adapts_and_loss_finite() -> None:
     result = trainer.train_step(batch, feedbacks)
     assert torch.isfinite(result.loss)
     assert trainer.config.kl_coeff > initial_coeff
+
+
+def test_train_step_group_normalize_single_sample_is_finite() -> None:
+    policy = SimplePolicy(num_actions=2)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    config = DAPOConfig(group_size=1, adaptive_kl=False)
+    trainer = DAPOTrainer(policy, optimizer, config, reward_mixer=RewardMixerConfig())
+
+    actions = torch.zeros(1, dtype=torch.long)
+    inputs = {"batch_size": actions.shape[0]}
+    logp_old = trainer.ref_policy.logprobs(actions, **inputs)
+    batch = DAPOBatch(inputs=inputs, actions=actions, logp_old=logp_old)
+
+    feedbacks = [GEPAFeedback(rewards={"reward": 1.0})]
+    result = trainer.train_step(batch, feedbacks)
+
+    assert torch.isfinite(result.loss)
+    assert result.metrics["reward/std"] == 0.0
