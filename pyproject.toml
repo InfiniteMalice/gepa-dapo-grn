@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "InfiniteMalice" }]
-dependencies = ["torch>=2.0"]
+dependencies = ["torch>=2.0,<3.0"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-hf = ["transformers>=4.40"]
+hf = ["transformers>=4.40,<5.0"]
 dev = ["pytest", "ruff", "black"]
 
 [tool.setuptools]

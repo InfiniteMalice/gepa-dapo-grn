@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+from gepa_dapo_grn._ema_helpers import _update_ema
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
