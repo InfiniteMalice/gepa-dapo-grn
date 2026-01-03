@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Optional
 
-from gepa_dapo_grn.ema_utils import update_ema
+from gepa_dapo_grn._ema_helpers import _update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -47,11 +47,11 @@ class CurriculumTracker:
         stats = self.tasks.setdefault(task_id, TaskStats())
         for key, value in feedback.rewards.items():
             current = stats.reward_ema.get(key, float(value))
-            stats.reward_ema[key] = update_ema(current, float(value), self.decay)
+            stats.reward_ema[key] = _update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = stats.tag_ema.get(key, float(value))
-            stats.tag_ema[key] = update_ema(current, float(value), self.decay)
-        stats.abstention_ema = update_ema(
+            stats.tag_ema[key] = _update_ema(current, float(value), self.decay)
+        stats.abstention_ema = _update_ema(
             stats.abstention_ema,
             float(feedback.abstained),
             self.decay,

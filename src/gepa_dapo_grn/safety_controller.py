@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+from gepa_dapo_grn._ema_helpers import _update_ema
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig
-from gepa_dapo_grn.ema_utils import update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -53,10 +53,10 @@ class SafetyController:
 
         for key, value in feedback.rewards.items():
             current = self.state.reward_ema.get(key, float(value))
-            self.state.reward_ema[key] = update_ema(current, float(value), self.decay)
+            self.state.reward_ema[key] = _update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = self.state.tag_ema.get(key, float(value))
-            self.state.tag_ema[key] = update_ema(current, float(value), self.decay)
+            self.state.tag_ema[key] = _update_ema(current, float(value), self.decay)
         self.state.count += 1
         return self.state
 
