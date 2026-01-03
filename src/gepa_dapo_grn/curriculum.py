@@ -7,7 +7,6 @@ import sys
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Optional
 
-from gepa_dapo_grn.ema_utils import update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -19,6 +18,14 @@ class TaskStats:
     tag_ema: Dict[str, float] = field(default_factory=dict)
     abstention_ema: float = 0.0
     count: int = 0
+
+
+def _update_ema(current: float, value: float, decay: float) -> float:
+    """Return the exponential moving average update."""
+
+    if not 0.0 <= decay <= 1.0:
+        raise ValueError(f"decay must be in [0, 1], got {decay}")
+    return decay * current + (1.0 - decay) * value
 
 
 class CurriculumTracker:
@@ -47,11 +54,11 @@ class CurriculumTracker:
         stats = self.tasks.setdefault(task_id, TaskStats())
         for key, value in feedback.rewards.items():
             current = stats.reward_ema.get(key, float(value))
-            stats.reward_ema[key] = update_ema(current, float(value), self.decay)
+            stats.reward_ema[key] = _update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = stats.tag_ema.get(key, float(value))
-            stats.tag_ema[key] = update_ema(current, float(value), self.decay)
-        stats.abstention_ema = update_ema(
+            stats.tag_ema[key] = _update_ema(current, float(value), self.decay)
+        stats.abstention_ema = _update_ema(
             stats.abstention_ema,
             float(feedback.abstained),
             self.decay,
