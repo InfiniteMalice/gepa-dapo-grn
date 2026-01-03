@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig
-from gepa_dapo_grn.ema_utils import update_ema
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -17,6 +16,14 @@ class SafetyState:
     reward_ema: Dict[str, float] = field(default_factory=dict)
     tag_ema: Dict[str, float] = field(default_factory=dict)
     count: int = 0
+
+
+def _update_ema(current: float, value: float, decay: float) -> float:
+    """Return the exponential moving average update."""
+
+    if not 0.0 <= decay <= 1.0:
+        raise ValueError(f"decay must be in [0, 1], got {decay}")
+    return decay * current + (1.0 - decay) * value
 
 
 class SafetyController:
@@ -53,10 +60,10 @@ class SafetyController:
 
         for key, value in feedback.rewards.items():
             current = self.state.reward_ema.get(key, float(value))
-            self.state.reward_ema[key] = update_ema(current, float(value), self.decay)
+            self.state.reward_ema[key] = _update_ema(current, float(value), self.decay)
         for key, value in feedback.tags.items():
             current = self.state.tag_ema.get(key, float(value))
-            self.state.tag_ema[key] = update_ema(current, float(value), self.decay)
+            self.state.tag_ema[key] = _update_ema(current, float(value), self.decay)
         self.state.count += 1
         return self.state
 
