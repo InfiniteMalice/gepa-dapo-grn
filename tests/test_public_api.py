@@ -48,14 +48,17 @@ class TinyPolicy(Policy):
 
 
 def test_public_api_exports() -> None:
-    assert DAPOTrainer
-    assert DAPOConfig
-    assert GRNConfig
-    assert RewardMixerConfig
-    assert GEPAFeedback
-    assert CurriculumTracker
-    assert SafetyController
-    assert GlobalResponseNorm
+    for cls in [
+        DAPOTrainer,
+        DAPOConfig,
+        GRNConfig,
+        RewardMixerConfig,
+        GEPAFeedback,
+        CurriculumTracker,
+        SafetyController,
+        GlobalResponseNorm,
+    ]:
+        assert inspect.isclass(cls), f"{cls} should be a class"
 
 
 def test_public_api_schema_fields() -> None:

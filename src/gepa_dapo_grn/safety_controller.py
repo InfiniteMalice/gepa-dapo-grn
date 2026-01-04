@@ -35,7 +35,7 @@ class SafetyController:
         grn_enable_threshold: float = 0.2,
     ) -> None:
         if not 0.0 < decay < 1.0:
-            raise ValueError("decay must be between 0 and 1")
+            raise ValueError("decay must be strictly between 0 and 1 (exclusive)")
         self.decay = decay
         self.reward_risk_weights = reward_risk_weights or {}
         self.tag_risk_weights = tag_risk_weights or {}
