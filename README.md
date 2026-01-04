@@ -42,6 +42,11 @@ fb = GEPAFeedback(
 )
 ```
 
+## Public API
+
+Public API is defined by `__init__.py` exports. Anything not exported there is considered
+internal and may change without notice.
+
 ## What this library intentionally does NOT do
 
 - ship datasets
@@ -104,3 +109,7 @@ python -m build
    ```bash
    twine upload dist/*
    ```
+
+## License
+
+MIT (see [LICENSE](LICENSE)).
