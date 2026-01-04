@@ -27,7 +27,8 @@ class TinyPolicy(Policy):
         self.value_head = nn.Linear(num_actions, 1)
 
     def forward(self, **inputs: torch.Tensor) -> PolicyOutput:
-        batch_size = inputs["batch_size"]
+        batch_size_tensor = inputs["batch_size"]
+        batch_size = int(batch_size_tensor.item())
         logits = self.logits_param.repeat(batch_size, 1)
         values = self.value_head(logits).squeeze(-1)
         return PolicyOutput(logits=logits, values=values)
@@ -99,7 +100,7 @@ def test_train_step_signature_and_metrics() -> None:
     trainer = DAPOTrainer(policy, optimizer)
 
     actions = torch.zeros(2, dtype=torch.long)
-    inputs = {"batch_size": actions.shape[0]}
+    inputs = {"batch_size": torch.tensor(actions.shape[0])}
     logp_old = trainer.ref_policy.logprobs(actions, **inputs)
     batch = DAPOBatch(inputs=inputs, actions=actions, logp_old=logp_old)
 
