@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Optional
 
 import torch
 from torch import nn
+
+from gepa_dapo_grn._compat import dataclass
 
 
 @dataclass(slots=True)

@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   test:
@@ -17,6 +19,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install (dev)
         run: |
@@ -37,6 +40,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Build sdist/wheel
         run: |
@@ -60,6 +64,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
       - run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
