@@ -56,7 +56,7 @@ jobs:
           . /tmp/venv/bin/activate
           pip install --upgrade pip
           pip install dist/*.whl
-          python -c "import gepa_dapo_grn; print('import ok:', gepa_dapo_grn.__version__ if hasattr(gepa_dapo_grn,'__version__') else 'no version attr')"
+          python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
 
   lint:
     runs-on: ubuntu-latest
