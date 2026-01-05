@@ -72,6 +72,14 @@ To build source and wheel distributions:
 python -m build
 ```
 
+## Release verification
+
+```bash
+python -m build
+twine check dist/*
+pip install dist/*.whl
+```
+
 ## PyPI publishing checklist
 
 1. Install build and upload tooling:
