@@ -17,8 +17,16 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
+[project.urls]
+Homepage = "https://github.com/InfiniteMalice/gepa-dapo-grn"
+Repository = "https://github.com/InfiniteMalice/gepa-dapo-grn"
+Issues = "https://github.com/InfiniteMalice/gepa-dapo-grn/issues"
 
 [project.optional-dependencies]
 hf = ["transformers>=4.40,<5.0"]
