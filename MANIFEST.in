@@ -1,3 +1,4 @@
 include README.md
+include CHANGELOG.md
 include LICENSE
 recursive-include src/gepa_dapo_grn *.py
