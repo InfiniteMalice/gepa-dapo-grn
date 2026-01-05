@@ -64,14 +64,6 @@ This project follows semantic versioning:
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
-## Build artifacts
-
-To build source and wheel distributions:
-
-```bash
-python -m build
-```
-
 ## PyPI publishing checklist
 
 1. Install build and upload tooling:
