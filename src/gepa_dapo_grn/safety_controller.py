@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Dict, Optional
 
+from gepa_dapo_grn._compat import dataclass
 from gepa_dapo_grn._ema_helpers import _update_ema
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
@@ -17,14 +18,6 @@ class SafetyState:
     reward_ema: Dict[str, float] = field(default_factory=dict)
     tag_ema: Dict[str, float] = field(default_factory=dict)
     count: int = 0
-
-
-def _update_ema(current: float, value: float, decay: float) -> float:
-    """Return the exponential moving average update."""
-
-    if not 0.0 <= decay <= 1.0:
-        raise ValueError(f"decay must be in [0, 1], got {decay}")
-    return decay * current + (1.0 - decay) * value
 
 
 class SafetyController:
@@ -42,7 +35,7 @@ class SafetyController:
         grn_enable_threshold: float = 0.2,
     ) -> None:
         if not 0.0 < decay < 1.0:
-            raise ValueError("decay must be between 0 and 1")
+            raise ValueError("decay must be strictly between 0 and 1 (exclusive)")
         self.decay = decay
         self.reward_risk_weights = reward_risk_weights or {}
         self.tag_risk_weights = tag_risk_weights or {}

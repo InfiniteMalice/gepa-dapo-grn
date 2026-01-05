@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Dict, Optional
+
+from gepa_dapo_grn._compat import dataclass
 
 
 @dataclass(slots=True)
