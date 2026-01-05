@@ -34,7 +34,7 @@ class CurriculumTracker:
         weight_fn: Optional[Callable[[TaskStats], float]] = None,
     ) -> None:
         if not 0.0 < decay < 1.0:
-            raise ValueError("decay must be between 0 and 1")
+            raise ValueError("decay must be strictly between 0 and 1 (exclusive)")
         self.decay = decay
         self.reward_weights = reward_weights or {}
         self.tag_weights = tag_weights or {}
