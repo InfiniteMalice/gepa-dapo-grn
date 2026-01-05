@@ -61,6 +61,13 @@ def test_public_api_exports() -> None:
         assert inspect.isclass(cls), f"{cls} should be a class"
 
 
+def test_version_attribute() -> None:
+    import gepa_dapo_grn
+
+    assert hasattr(gepa_dapo_grn, "__version__")
+    assert isinstance(gepa_dapo_grn.__version__, str)
+
+
 def test_public_api_schema_fields() -> None:
     assert {field.name for field in fields(GEPAFeedback)} == {
         "rewards",
