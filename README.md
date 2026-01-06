@@ -64,44 +64,6 @@ This project follows semantic versioning:
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
-## PyPI publishing checklist
-
-1. Install build and upload tooling:
-
-   ```bash
-   pip install build twine
-   ```
-
-2. Build artifacts:
-
-   ```bash
-   python -m build
-   ```
-
-3. Check distributions:
-
-   ```bash
-   twine check dist/*
-   ```
-
-4. Upload to TestPyPI first:
-
-   ```bash
-   twine upload --repository testpypi dist/*
-   ```
-
-5. Install from TestPyPI to validate:
-
-   ```bash
-   pip install -i https://test.pypi.org/simple/ gepa-dapo-grn
-   ```
-
-6. Upload to PyPI:
-
-   ```bash
-   twine upload dist/*
-   ```
-
 ## License
 
 MIT (see [LICENSE](LICENSE)).
