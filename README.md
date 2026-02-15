@@ -11,7 +11,7 @@ controls, verifier-first hooks, and optional Global Response Normalization (GRN)
 - **Supports DAPO + curriculum + safety + GRN** with conservative defaults and GRN disabled
   unless explicitly enabled.
 
-## Practical guidance (v0.2.0)
+## Practical guidance (v0.2.1)
 
 - **Verifier-first**: use `VerifierResult` and `GEPAFeedback.verifier` for pass/fail, scores,
   confidence, coverage, and diagnostics.

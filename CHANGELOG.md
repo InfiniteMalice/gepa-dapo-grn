@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-02-15
+
+- Audited packaging metadata and synchronized the project version across `pyproject.toml`,
+  runtime `__version__`, and release documentation to avoid release/upload mismatches.
+- Added packaging metadata tests to catch dependency/version drift before publishing.
+
 ## [0.2.0] - 2026-02-15
 
 - Removed built-in explicit deception penalties; deception-like signals are treated as
