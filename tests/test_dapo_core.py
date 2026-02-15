@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from gepa_dapo_grn.config import DAPOConfig, RewardMixerConfig
-from gepa_dapo_grn.dapo_core import DAPOBatch, DAPOTrainer
+from gepa_dapo_grn.dapo_core import DAPOBatch, DAPOTrainer, _soft_ratio_weights
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 from gepa_dapo_grn.policy_interfaces import Policy, PolicyOutput
 
@@ -50,6 +50,32 @@ def test_policy_loss_decoupled_clipping() -> None:
     adv_clipped = torch.clamp(advantages, min=-config.clip_advantage, max=config.clip_advantage)
     expected = -(ratio_clipped * adv_clipped).mean()
     assert torch.allclose(loss, expected)
+
+
+def test_soft_gating_weights_monotonic() -> None:
+    log_ratio = torch.tensor([0.0, 0.2, 0.8])
+    weights = _soft_ratio_weights(log_ratio, temperature=0.5)
+    assert torch.isfinite(weights).all()
+    assert weights[0] > weights[1] > weights[2]
+
+
+def test_soft_gating_policy_loss_is_finite() -> None:
+    policy = SimplePolicy(num_actions=2)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    config = DAPOConfig(
+        clip_ratio=0.1,
+        clip_advantage=1.0,
+        adaptive_kl=False,
+        use_soft_gating=True,
+        gating_temperature=0.5,
+    )
+    trainer = DAPOTrainer(policy, optimizer, config)
+    loss = trainer._compute_policy_loss(
+        torch.tensor([0.0, -1.0, 1.0]),
+        torch.tensor([0.0, 0.0, 0.0]),
+        torch.tensor([1.0, 1.0, -1.0]),
+    )
+    assert torch.isfinite(loss)
 
 
 def test_kl_coeff_adapts_and_loss_finite() -> None:
