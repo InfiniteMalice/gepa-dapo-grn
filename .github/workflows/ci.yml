@@ -56,14 +56,7 @@ jobs:
           python -m venv /tmp/venv
           . /tmp/venv/bin/activate
           pip install --upgrade pip
-          PROJECT_VERSION=$(python - <<'PY2'
-          import tomllib
-          from pathlib import Path
-          
-          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          print(pyproject["project"]["version"])
-          PY2
-          )
+          PROJECT_VERSION=$(python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
           WHEEL_PATH=$(ls -1 dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl)
           pip install "$WHEEL_PATH"
           python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"

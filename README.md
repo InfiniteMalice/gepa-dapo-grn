@@ -50,6 +50,23 @@ fb = GEPAFeedback(
 )
 ```
 
+
+## Building and installing a local wheel safely
+
+If you build multiple versions locally, avoid `pip install dist/*.whl` because pip will try to
+install all matching wheel files (which can include multiple versions of this same package and
+fail with `ResolutionImpossible`).
+
+Use this sequence instead:
+
+```bash
+rm -rf build dist *.egg-info
+python -m pip install --upgrade build
+python -m build
+PROJECT_VERSION=$(python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+pip install "dist/gepa_dapo_grn-${PROJECT_VERSION}-py3-none-any.whl"
+```
+
 ## Public API
 
 Public API is defined by `__init__.py` exports. Anything not exported there is considered
