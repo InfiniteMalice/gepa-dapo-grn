@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1] - 2026-02-15
+
+- Audited packaging metadata and synchronized the project version across `pyproject.toml`,
+  runtime `__version__`, and release documentation to avoid release/upload mismatches.
+- Added packaging metadata tests to catch dependency/version drift before publishing.
+- Fixed wheel smoke-install workflow to install exactly one freshly built wheel, avoiding pip
+  resolver conflicts when multiple package versions exist in `dist/`.
+- Documented safe local build/install commands that select a single wheel version instead of
+  using `dist/*.whl`.
+
 ## [0.2.0] - 2026-02-15
 
 - Removed built-in explicit deception penalties; deception-like signals are treated as
