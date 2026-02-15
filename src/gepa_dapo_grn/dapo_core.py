@@ -119,13 +119,16 @@ class DAPOTrainer:
         logp_old: torch.Tensor,
         advantages: torch.Tensor,
     ) -> torch.Tensor:
-        ratio = torch.exp(logp_new - logp_old)
+        log_ratio = logp_new - logp_old
         advantages_clipped = _clip_advantages(advantages, self.config.clip_advantage)
 
         if self.config.use_soft_gating:
-            weights = _soft_ratio_weights(logp_new - logp_old, self.config.gating_temperature)
+            safe_log_ratio = torch.clamp(log_ratio, min=-30.0, max=30.0)
+            ratio = torch.exp(safe_log_ratio)
+            weights = _soft_ratio_weights(log_ratio, self.config.gating_temperature)
             return -((ratio * advantages_clipped) * weights).mean()
 
+        ratio = torch.exp(log_ratio)
         ratio_clipped = torch.clamp(
             ratio,
             1.0 - self.config.clip_ratio,

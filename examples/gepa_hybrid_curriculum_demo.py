@@ -36,7 +36,11 @@ def generate_batch(task_id: str, depth: int) -> List[GEPAFeedback]:
     feedbacks = []
     base = 0.85 if task_id == "easy" else 0.45
     for _ in range(4):
-        signal = max(0.0, min(1.0, random.uniform(base - 0.1, base + 0.1) - 0.05 * depth))
+        low = base - 0.1
+        high = base + 0.1
+        sample = random.uniform(low, high)
+        adjusted = sample - 0.05 * depth
+        signal = max(0.0, min(1.0, adjusted))
         rewards = {"quality": signal}
         feedbacks.append(make_feedback(task_id, rewards, signal=signal, depth=depth))
     return feedbacks
@@ -71,13 +75,13 @@ def main() -> None:
 
         task_stats = curriculum.describe_task(task_id)
         metrics = {
+            **summarize_feedback(feedbacks),
             "sample_weight": curriculum.sample_weight(task_id),
             "clip_ratio": dapo_config.clip_ratio,
             "kl_coeff": dapo_config.kl_coeff,
             "composition_depth": task_stats.get("composition_depth", 0.0),
             "verifier_pass_rate_ema": task_stats.get("verifier_pass_rate_ema", 0.0),
             "coverage": task_stats.get("coverage", 1.0),
-            **summarize_feedback(feedbacks),
             **safety.describe(),
         }
         if step % 2 == 0:

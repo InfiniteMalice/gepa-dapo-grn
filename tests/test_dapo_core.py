@@ -115,3 +115,17 @@ def test_train_step_group_normalize_single_sample_is_finite() -> None:
 
     assert torch.isfinite(result.loss)
     assert result.metrics["reward/std"] == 0.0
+
+
+def test_soft_gating_large_log_ratio_is_finite() -> None:
+    policy = SimplePolicy(num_actions=2)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    config = DAPOConfig(use_soft_gating=True, gating_temperature=1.0, adaptive_kl=False)
+    trainer = DAPOTrainer(policy, optimizer, config)
+
+    logp_new = torch.tensor([1000.0, -1000.0])
+    logp_old = torch.tensor([0.0, 0.0])
+    advantages = torch.tensor([1.0, 1.0])
+
+    loss = trainer._compute_policy_loss(logp_new, logp_old, advantages)
+    assert torch.isfinite(loss)
