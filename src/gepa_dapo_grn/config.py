@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from gepa_dapo_grn._compat import dataclass
 
@@ -22,6 +22,8 @@ class DAPOConfig:
         max_grad_norm: Maximum gradient norm for clipping.
         value_coef: Weighting for the value loss term.
         group_size: Optional group size for group-based advantage normalization.
+        use_soft_gating: Use smooth ratio gating instead of hard clipping.
+        gating_temperature: Temperature for soft ratio gating.
     """
 
     clip_ratio: float = 0.2
@@ -33,6 +35,8 @@ class DAPOConfig:
     max_grad_norm: float = 1.0
     value_coef: float = 0.5
     group_size: Optional[int] = None
+    use_soft_gating: bool = False
+    gating_temperature: float = 1.0
 
 
 @dataclass(slots=True)
@@ -43,6 +47,12 @@ class GRNConfig:
     apply_to_policy: bool = False
     apply_to_value: bool = False
     epsilon: float = 1e-6
+    include_modules: List[str] = field(default_factory=list)
+    exclude_modules: List[str] = field(default_factory=list)
+    protect_probe_modules: bool = True
+    probe_name_patterns: List[str] = field(
+        default_factory=lambda: ["probe", "interpret", "explainability", "attribution"]
+    )
 
 
 @dataclass(slots=True)
@@ -61,4 +71,4 @@ class RewardMixerConfig:
     normalize: bool = True
     clip_min: Optional[float] = None
     clip_max: Optional[float] = None
-    default_weight: float = 1.0
+    default_weight: float = 0.0

@@ -15,6 +15,8 @@ from gepa_dapo_grn import (
     GRNConfig,
     RewardMixerConfig,
     SafetyController,
+    SimpleTextComposer,
+    VerifierResult,
 )
 from gepa_dapo_grn.dapo_core import DAPOBatch
 from gepa_dapo_grn.policy_interfaces import Policy, PolicyOutput
@@ -54,7 +56,9 @@ def test_public_api_exports() -> None:
         GRNConfig,
         RewardMixerConfig,
         GEPAFeedback,
+        VerifierResult,
         CurriculumTracker,
+        SimpleTextComposer,
         SafetyController,
         GlobalResponseNorm,
     ]:
@@ -72,6 +76,7 @@ def test_public_api_schema_fields() -> None:
     assert {field.name for field in fields(GEPAFeedback)} == {
         "rewards",
         "tags",
+        "verifier",
         "meta",
         "abstained",
     }
@@ -85,12 +90,18 @@ def test_public_api_schema_fields() -> None:
         "max_grad_norm",
         "value_coef",
         "group_size",
+        "use_soft_gating",
+        "gating_temperature",
     }
     assert {field.name for field in fields(GRNConfig)} == {
         "enabled",
         "apply_to_policy",
         "apply_to_value",
         "epsilon",
+        "include_modules",
+        "exclude_modules",
+        "protect_probe_modules",
+        "probe_name_patterns",
     }
     assert {field.name for field in fields(RewardMixerConfig)} == {
         "weights",

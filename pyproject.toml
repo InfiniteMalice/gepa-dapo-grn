@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gepa-dapo-grn"
-dynamic = ["version"]
+version = "0.2.0"
 description = "GEPA-aware DAPO reinforcement learning with optional Global Response Normalization"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -38,8 +38,6 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.dynamic]
-version = { attr = "gepa_dapo_grn._version.__version__" }
 
 [tool.black]
 line-length = 100
