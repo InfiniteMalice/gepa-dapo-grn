@@ -30,7 +30,7 @@ Issues = "https://github.com/InfiniteMalice/gepa-dapo-grn/issues"
 
 [project.optional-dependencies]
 hf = ["transformers>=4.40,<5.0"]
-dev = ["pytest", "ruff", "black"]
+dev = ["pytest", "ruff", "black", 'tomli>=1.1.0; python_version < "3.11"']
 
 [tool.setuptools]
 package-dir = { "" = "src" }
