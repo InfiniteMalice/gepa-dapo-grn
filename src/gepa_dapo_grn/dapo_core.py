@@ -49,6 +49,12 @@ def _clip_advantages(advantages: torch.Tensor, clip_value: float) -> torch.Tenso
     return torch.clamp(advantages, min=-clip_value, max=clip_value)
 
 
+def _soft_ratio_weights(log_ratio: torch.Tensor, temperature: float) -> torch.Tensor:
+    safe_temperature = max(1e-6, float(temperature))
+    weights = torch.exp(-torch.abs(log_ratio) / safe_temperature)
+    return torch.clamp(weights, min=0.0, max=1.0)
+
+
 def _approx_kl(logp_new: torch.Tensor, logp_ref: torch.Tensor) -> torch.Tensor:
     return (logp_new - logp_ref).mean()
 
@@ -113,13 +119,21 @@ class DAPOTrainer:
         logp_old: torch.Tensor,
         advantages: torch.Tensor,
     ) -> torch.Tensor:
-        ratio = torch.exp(logp_new - logp_old)
+        log_ratio = logp_new - logp_old
+        advantages_clipped = _clip_advantages(advantages, self.config.clip_advantage)
+
+        if self.config.use_soft_gating:
+            safe_log_ratio = torch.clamp(log_ratio, min=-30.0, max=30.0)
+            ratio = torch.exp(safe_log_ratio)
+            weights = _soft_ratio_weights(log_ratio, self.config.gating_temperature)
+            return -((ratio * advantages_clipped) * weights).mean()
+
+        ratio = torch.exp(log_ratio)
         ratio_clipped = torch.clamp(
             ratio,
             1.0 - self.config.clip_ratio,
             1.0 + self.config.clip_ratio,
         )
-        advantages_clipped = _clip_advantages(advantages, self.config.clip_advantage)
         return -(ratio_clipped * advantages_clipped).mean()
 
     def _compute_value_loss(self, values: torch.Tensor, returns: torch.Tensor) -> torch.Tensor:
@@ -205,6 +219,8 @@ class DAPOTrainer:
             "kl/coeff": self.config.kl_coeff,
             "reward/mean": scalar_rewards.mean().item(),
             "reward/std": scalar_rewards.std(unbiased=False).item(),
+            "policy/use_soft_gating": float(self.config.use_soft_gating),
+            "policy/gating_temperature": float(self.config.gating_temperature),
         }
         metrics.update(reward_stats)
         metrics.update(self.safety_controller.describe())
@@ -222,6 +238,7 @@ class DAPOTrainer:
             "safety_state": {
                 "reward_ema": self.safety_controller.state.reward_ema,
                 "tag_ema": self.safety_controller.state.tag_ema,
+                "verifier_ema": self.safety_controller.state.verifier_ema,
                 "count": self.safety_controller.state.count,
             },
         }
@@ -245,5 +262,6 @@ class DAPOTrainer:
             safety = state["safety_state"]
             self.safety_controller.state.reward_ema = safety.get("reward_ema", {})
             self.safety_controller.state.tag_ema = safety.get("tag_ema", {})
+            self.safety_controller.state.verifier_ema = safety.get("verifier_ema", {})
             self.safety_controller.state.count = safety.get("count", 0)
         self._sync_grn_wrapping()

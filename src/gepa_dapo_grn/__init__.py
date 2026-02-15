@@ -2,9 +2,9 @@
 
 from gepa_dapo_grn._version import __version__
 from gepa_dapo_grn.config import DAPOConfig, GRNConfig, RewardMixerConfig
-from gepa_dapo_grn.curriculum import CurriculumTracker
+from gepa_dapo_grn.curriculum import CurriculumTracker, SimpleTextComposer, TaskComposer
 from gepa_dapo_grn.dapo_core import DAPOTrainer
-from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
+from gepa_dapo_grn.gepa_interfaces import GEPAFeedback, Verifier, VerifierResult
 from gepa_dapo_grn.grn import GlobalResponseNorm
 from gepa_dapo_grn.safety_controller import SafetyController
 
@@ -13,8 +13,12 @@ __all__ = [
     "GRNConfig",
     "RewardMixerConfig",
     "GEPAFeedback",
+    "Verifier",
+    "VerifierResult",
     "DAPOTrainer",
     "CurriculumTracker",
+    "TaskComposer",
+    "SimpleTextComposer",
     "SafetyController",
     "GlobalResponseNorm",
     "__version__",
