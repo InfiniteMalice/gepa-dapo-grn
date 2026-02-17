@@ -11,7 +11,7 @@ controls, verifier-first hooks, and optional Global Response Normalization (GRN)
 - **Supports DAPO + curriculum + safety + GRN** with conservative defaults and GRN disabled
   unless explicitly enabled.
 
-## Practical guidance (v0.2.0)
+## Practical guidance (v0.2.1)
 
 - **Verifier-first**: use `VerifierResult` and `GEPAFeedback.verifier` for pass/fail, scores,
   confidence, coverage, and diagnostics.
@@ -48,6 +48,28 @@ fb = GEPAFeedback(
     meta={"task_id": "demo"},
     abstained=False,
 )
+```
+
+
+## Building and installing a local wheel safely
+
+If you build multiple versions locally, avoid `pip install dist/*.whl` because pip will try to
+install all matching wheel files (which can include multiple versions of this same package and
+fail with `ResolutionImpossible`).
+
+Use this sequence instead:
+
+```bash
+rm -rf build dist *.egg-info
+python -m pip install --upgrade build
+python -m build
+PROJECT_VERSION=$(python -c "from pathlib import Path;
+try:
+ import tomllib as toml
+except ImportError:
+ import tomli as toml
+print(toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+pip install "dist/gepa_dapo_grn-${PROJECT_VERSION}-py3-none-any.whl"
 ```
 
 ## Public API
