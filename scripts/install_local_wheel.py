@@ -58,8 +58,15 @@ def main() -> int:
     if args.prune_other_versions and dist_dir.exists():
         current_prefix = f"{package_prefix}-{project_version}-"
         for wheel_path in dist_dir.glob(f"{package_prefix}-*.whl"):
-            if not wheel_path.name.startswith(current_prefix):
+            if wheel_path.name.startswith(current_prefix):
+                continue
+            try:
                 wheel_path.unlink()
+            except (OSError, PermissionError) as exc:
+                print(
+                    f"Warning: failed to remove old wheel {wheel_path}: {exc}",
+                    file=sys.stderr,
+                )
 
     from gepa_dapo_grn._packaging import find_single_wheel
 
