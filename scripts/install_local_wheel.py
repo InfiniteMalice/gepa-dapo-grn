@@ -101,7 +101,7 @@ def main() -> int:
             package_prefix=package_prefix,
             version=project_version,
         )
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, FileExistsError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
