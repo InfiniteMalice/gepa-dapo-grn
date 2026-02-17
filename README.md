@@ -63,11 +63,13 @@ Use this sequence instead:
 rm -rf build dist *.egg-info
 python -m pip install --upgrade build
 python -m build
-python scripts/install_local_wheel.py --prune-other-versions
+python scripts/install_local_wheel.py --remove-version 0.1.0 --prune-other-versions
 ```
 
-This follows pip's suggested fix to remove conflicting versions before install: `--prune-other-versions`
-deletes older `dist/gepa_dapo_grn-*.whl` files so pip receives exactly one wheel path.
+This follows pip's suggested fix to remove conflicting versions before install:
+`--remove-version 0.1.0` explicitly deprecates local v0.1.0 artifacts and
+`--prune-other-versions` removes any other non-current wheel files so pip
+receives exactly one path.
 
 ## Public API
 

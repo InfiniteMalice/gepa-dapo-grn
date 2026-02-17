@@ -11,6 +11,8 @@
   using `dist/*.whl`.
 - Added `scripts/install_local_wheel.py` to install only one wheel and optionally prune older
   local wheel versions before install.
+- Added `--remove-version` support to `scripts/install_local_wheel.py` so local wheel versions
+  like `0.1.0` can be explicitly removed before install.
 
 ## [0.2.0] - 2026-02-15
 

@@ -45,12 +45,31 @@ def _parse_args() -> argparse.Namespace:
         help="Delete wheel files for other versions in dist before install.",
     )
     parser.add_argument(
+        "--remove-version",
+        action="append",
+        default=[],
+        help=(
+            "Delete wheel(s) for a specific version before install. "
+            "Use repeatedly, e.g. --remove-version 0.1.0"
+        ),
+    )
+    parser.add_argument(
         "--pip-arg",
         action="append",
         default=[],
         help="Additional argument to pass through to pip install (repeatable).",
     )
     return parser.parse_args()
+
+
+def _safe_delete_wheel(wheel_path: Path) -> None:
+    try:
+        wheel_path.unlink()
+    except (OSError, PermissionError) as exc:
+        print(
+            f"Warning: failed to remove old wheel {wheel_path}: {exc}",
+            file=sys.stderr,
+        )
 
 
 def main() -> int:
@@ -62,18 +81,17 @@ def main() -> int:
     project_version = _load_project_version(pyproject_path)
     package_prefix = "gepa_dapo_grn"
 
+    if dist_dir.exists() and args.remove_version:
+        for version in args.remove_version:
+            for wheel_path in dist_dir.glob(f"{package_prefix}-{version}-*.whl"):
+                _safe_delete_wheel(wheel_path)
+
     if args.prune_other_versions and dist_dir.exists():
         current_prefix = f"{package_prefix}-{project_version}-"
         for wheel_path in dist_dir.glob(f"{package_prefix}-*.whl"):
             if wheel_path.name.startswith(current_prefix):
                 continue
-            try:
-                wheel_path.unlink()
-            except (OSError, PermissionError) as exc:
-                print(
-                    f"Warning: failed to remove old wheel {wheel_path}: {exc}",
-                    file=sys.stderr,
-                )
+            _safe_delete_wheel(wheel_path)
 
     from gepa_dapo_grn._packaging import find_single_wheel
 
