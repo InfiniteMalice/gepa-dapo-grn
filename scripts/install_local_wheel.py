@@ -32,13 +32,14 @@ def _load_project_version(pyproject_path: Path) -> str:
     project_table = pyproject_data.get("project")
     if not isinstance(project_table, dict):
         raise RuntimeError(
-            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project.version'."
+            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project' table."
         )
 
     project_version = project_table.get("version")
     if not isinstance(project_version, str) or not project_version.strip():
         raise RuntimeError(
-            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project.version'."
+            "Failed to parse "
+            f"{pyproject_path}: pyproject.toml missing or invalid 'project.version' value."
         )
 
     return project_version
@@ -78,7 +79,7 @@ def _parse_args() -> argparse.Namespace:
 def _safe_delete_wheel(wheel_path: Path) -> None:
     try:
         wheel_path.unlink()
-    except (OSError, PermissionError) as exc:
+    except OSError as exc:
         print(
             f"Warning: failed to remove old wheel {wheel_path}: {exc}",
             file=sys.stderr,
