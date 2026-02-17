@@ -63,7 +63,12 @@ Use this sequence instead:
 rm -rf build dist *.egg-info
 python -m pip install --upgrade build
 python -m build
-PROJECT_VERSION=$(python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+PROJECT_VERSION=$(python -c "from pathlib import Path;
+try:
+ import tomllib as toml
+except ImportError:
+ import tomli as toml
+print(toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
 pip install "dist/gepa_dapo_grn-${PROJECT_VERSION}-py3-none-any.whl"
 ```
 
