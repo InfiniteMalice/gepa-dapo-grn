@@ -18,7 +18,14 @@ def _load_project_version(pyproject_path: Path) -> str:
     try:
         import tomllib as toml
     except ImportError:  # pragma: no cover
-        import tomli as toml
+        try:
+            import tomli as toml
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "Failed to parse "
+                f"{pyproject_path}: tomllib is unavailable and tomli is not installed. "
+                "Install tomli (for example: `pip install tomli`) or install dev extras."
+            ) from exc
 
     pyproject_data = toml.loads(pyproject_path.read_text(encoding="utf-8"))
     return pyproject_data["project"]["version"]

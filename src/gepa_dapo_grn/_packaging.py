@@ -15,6 +15,7 @@ def find_single_wheel(dist_dir: Path, package_prefix: str, version: str) -> Path
     matches = list(dist_dir.glob(pattern))
     if not matches:
         raise FileNotFoundError(
-            f"No wheel found matching {pattern!r} in {dist_dir}. Build first with python -m build."
+            f"No wheel found matching {pattern!r} in {dist_dir}. "
+            "Build first with python -m build."
         )
     return max(matches, key=lambda path: path.stat().st_mtime)

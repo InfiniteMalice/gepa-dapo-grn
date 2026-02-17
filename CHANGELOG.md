@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.1] - 2026-02-15
+## [0.2.1] - 2026-02-17
 
 - Audited packaging metadata and synchronized the project version across `pyproject.toml`,
   runtime `__version__`, and release documentation to avoid release/upload mismatches.
