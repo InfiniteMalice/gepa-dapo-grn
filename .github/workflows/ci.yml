@@ -64,6 +64,11 @@ jobs:
             echo "No wheel found for version ${PROJECT_VERSION} in dist/." >&2
             exit 1
           fi
+          if [ ${#WHEEL_PATH[@]} -gt 1 ]; then
+            echo "Ambiguous wheels found for version ${PROJECT_VERSION} in dist/:" >&2
+            printf ' - %s\n' "${WHEEL_PATH[@]}" >&2
+            exit 1
+          fi
           pip install "${WHEEL_PATH[0]}"
           python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
 
