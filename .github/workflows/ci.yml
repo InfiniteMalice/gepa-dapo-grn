@@ -45,17 +45,26 @@ jobs:
 
       - name: Build sdist/wheel
         run: |
+          rm -rf build dist *.egg-info
           python -m pip install --upgrade pip
           pip install build twine
           python -m build
           twine check dist/*
 
       - name: Smoke install wheel
+        shell: bash
         run: |
           python -m venv /tmp/venv
           . /tmp/venv/bin/activate
           pip install --upgrade pip
-          pip install dist/*.whl
+          PROJECT_VERSION=$(python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+          shopt -s nullglob
+          WHEEL_PATH=(dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl)
+          if [ ${#WHEEL_PATH[@]} -eq 0 ]; then
+            echo "No wheel found for version ${PROJECT_VERSION} in dist/." >&2
+            exit 1
+          fi
+          pip install "${WHEEL_PATH[0]}"
           python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
 
   lint:
