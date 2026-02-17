@@ -11,7 +11,7 @@ controls, verifier-first hooks, and optional Global Response Normalization (GRN)
 - **Supports DAPO + curriculum + safety + GRN** with conservative defaults and GRN disabled
   unless explicitly enabled.
 
-## Practical guidance (v0.2.0)
+## Practical guidance (v0.2.1)
 
 - **Verifier-first**: use `VerifierResult` and `GEPAFeedback.verifier` for pass/fail, scores,
   confidence, coverage, and diagnostics.
@@ -49,6 +49,27 @@ fb = GEPAFeedback(
     abstained=False,
 )
 ```
+
+
+## Building and installing a local wheel safely
+
+If you build multiple versions locally, avoid `pip install dist/*.whl` because pip will try to
+install all matching wheel files (which can include multiple versions of this same package and
+fail with `ResolutionImpossible`).
+
+Use this sequence instead:
+
+```bash
+rm -rf build dist *.egg-info
+python -m pip install --upgrade build
+python -m build
+python scripts/install_local_wheel.py --remove-version 0.1.0 --prune-other-versions
+```
+
+This follows pip's suggested fix to remove conflicting versions before install:
+`--remove-version 0.1.0` explicitly deprecates local v0.1.0 artifacts and
+`--prune-other-versions` removes any other non-current wheel files so pip
+receives exactly one path.
 
 ## Public API
 
