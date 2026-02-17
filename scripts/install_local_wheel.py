@@ -28,7 +28,20 @@ def _load_project_version(pyproject_path: Path) -> str:
             ) from exc
 
     pyproject_data = toml.loads(pyproject_path.read_text(encoding="utf-8"))
-    return pyproject_data["project"]["version"]
+
+    project_table = pyproject_data.get("project")
+    if not isinstance(project_table, dict):
+        raise RuntimeError(
+            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project.version'."
+        )
+
+    project_version = project_table.get("version")
+    if not isinstance(project_version, str) or not project_version.strip():
+        raise RuntimeError(
+            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project.version'."
+        )
+
+    return project_version
 
 
 def _parse_args() -> argparse.Namespace:

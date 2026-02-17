@@ -23,6 +23,8 @@ def test_project_version_matches_runtime_version() -> None:
 
 
 def test_dependency_constraints_remain_release_safe() -> None:
+    # Intentional snapshot guard: update these hardcoded values whenever release
+    # dependency constraints are intentionally changed in pyproject.toml.
     data = _load_pyproject()
     project = data["project"]
 
