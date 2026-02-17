@@ -9,6 +9,8 @@
   resolver conflicts when multiple package versions exist in `dist/`.
 - Documented safe local build/install commands that select a single wheel version instead of
   using `dist/*.whl`.
+- Added `scripts/install_local_wheel.py` to install only one wheel and optionally prune older
+  local wheel versions before install.
 
 ## [0.2.0] - 2026-02-15
 

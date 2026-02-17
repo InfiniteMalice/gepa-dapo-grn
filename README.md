@@ -63,14 +63,11 @@ Use this sequence instead:
 rm -rf build dist *.egg-info
 python -m pip install --upgrade build
 python -m build
-PROJECT_VERSION=$(python -c "from pathlib import Path;
-try:
- import tomllib as toml
-except ImportError:
- import tomli as toml
-print(toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
-pip install "dist/gepa_dapo_grn-${PROJECT_VERSION}-py3-none-any.whl"
+python scripts/install_local_wheel.py --prune-other-versions
 ```
+
+This follows pip's suggested fix to remove conflicting versions before install: `--prune-other-versions`
+deletes older `dist/gepa_dapo_grn-*.whl` files so pip receives exactly one wheel path.
 
 ## Public API
 
