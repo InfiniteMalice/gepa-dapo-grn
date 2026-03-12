@@ -2,6 +2,8 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 def _load_installer_module():
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "install_local_wheel.py"
@@ -175,9 +177,5 @@ def test_wheel_prefix_normalization_handles_special_chars() -> None:
 
 def test_wheel_prefix_normalization_rejects_empty_result() -> None:
     module = _load_installer_module()
-    try:
+    with pytest.raises(RuntimeError, match="Invalid project name for wheel prefix"):
         module._wheel_prefix_for_project_name("---")
-    except RuntimeError as exc:
-        assert "Invalid project name for wheel prefix" in str(exc)
-    else:
-        raise AssertionError("Expected RuntimeError for invalid project name")
