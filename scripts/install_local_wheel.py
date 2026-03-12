@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = REPO_ROOT / "src"
@@ -16,7 +17,7 @@ if str(SRC_PATH) not in sys.path:
 DEPRECATED_VERSIONS: tuple[str, ...] = ("0.1.0",)
 
 
-def _load_project_version(pyproject_path: Path) -> str:
+def _load_toml_module() -> Any:
     try:
         import tomllib as toml
     except ImportError:  # pragma: no cover
@@ -24,13 +25,23 @@ def _load_project_version(pyproject_path: Path) -> str:
             import tomli as toml
         except ImportError as exc:  # pragma: no cover
             raise RuntimeError(
-                "Failed to parse "
-                f"{pyproject_path}: tomllib is unavailable and tomli is not installed. "
-                "Install tomli (for example: `pip install tomli`) or install dev extras."
+                "Failed to parse pyproject.toml: tomllib is unavailable and "
+                "tomli is not installed. Install tomli (for example: "
+                "`pip install tomli`) or install dev extras."
             ) from exc
+    return toml
 
-    pyproject_data = toml.loads(pyproject_path.read_text(encoding="utf-8"))
 
+def _load_pyproject_data(pyproject_path: Path) -> dict[str, Any]:
+    toml = _load_toml_module()
+    data = toml.loads(pyproject_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise RuntimeError(f"Failed to parse {pyproject_path}: invalid TOML document root.")
+    return data
+
+
+def _load_project_version(pyproject_path: Path) -> str:
+    pyproject_data = _load_pyproject_data(pyproject_path)
     project_table = pyproject_data.get("project")
     if not isinstance(project_table, dict):
         raise RuntimeError(
@@ -45,6 +56,33 @@ def _load_project_version(pyproject_path: Path) -> str:
         )
 
     return project_version
+
+
+def _load_project_name(pyproject_path: Path) -> str:
+    pyproject_data = _load_pyproject_data(pyproject_path)
+
+    project_table = pyproject_data.get("project")
+    if isinstance(project_table, dict):
+        project_name = project_table.get("name")
+        if isinstance(project_name, str) and project_name.strip():
+            return project_name
+
+    tool_table = pyproject_data.get("tool")
+    if isinstance(tool_table, dict):
+        poetry_table = tool_table.get("poetry")
+        if isinstance(poetry_table, dict):
+            poetry_name = poetry_table.get("name")
+            if isinstance(poetry_name, str) and poetry_name.strip():
+                return poetry_name
+
+    raise RuntimeError(
+        "Failed to parse "
+        f"{pyproject_path}: missing or invalid 'project.name' (or tool.poetry.name)."
+    )
+
+
+def _wheel_prefix_for_project_name(project_name: str) -> str:
+    return project_name.replace("-", "_")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -105,7 +143,8 @@ def main() -> int:
     pyproject_path = repo_root / "pyproject.toml"
 
     project_version = _load_project_version(pyproject_path)
-    package_prefix = "gepa_dapo_grn"
+    project_name = _load_project_name(pyproject_path)
+    package_prefix = _wheel_prefix_for_project_name(project_name)
 
     versions_to_remove = _versions_to_remove(args.remove_version)
     if dist_dir.exists() and versions_to_remove:
@@ -128,7 +167,7 @@ def main() -> int:
             package_prefix=package_prefix,
             version=project_version,
         )
-    except (FileNotFoundError, FileExistsError) as exc:
+    except (FileNotFoundError, FileExistsError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

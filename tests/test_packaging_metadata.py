@@ -9,7 +9,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib
 
-from gepa_dapo_grn import __version__
+from gepa_dapo_grn._version import __version__
 
 
 def _load_pyproject() -> dict:

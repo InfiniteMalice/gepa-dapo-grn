@@ -16,14 +16,15 @@ def find_single_wheel(dist_dir: Path, package_prefix: str, version: str) -> Path
     matches = list(dist_dir.glob(pattern))
     if not matches:
         raise FileNotFoundError(
-            f"No wheel found matching {pattern!r} in {dist_dir}. "
+            f"No wheel found for package {package_prefix!r} version {version!r} in {dist_dir}. "
             "Build first with python -m build."
         )
     if len(matches) > 1:
         ambiguous_paths = ", ".join(str(path) for path in sorted(matches))
         raise FileExistsError(
-            f"Multiple wheels matched {pattern!r} in {dist_dir}: {ambiguous_paths}. "
-            "Clean dist/ or remove duplicate wheels before installing."
+            f"Multiple wheels found for package {package_prefix!r} version {version!r} in "
+            f"{dist_dir}: {ambiguous_paths}. Clean dist/ or remove duplicate wheels before "
+            "installing."
         )
 
     return matches[0]

@@ -19,8 +19,10 @@ def test_find_single_wheel_raises_for_missing_version(tmp_path: Path) -> None:
     old_wheel = tmp_path / "gepa_dapo_grn-0.1.0-py3-none-any.whl"
     old_wheel.write_text("old", encoding="utf-8")
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError) as exc_info:
         find_single_wheel(tmp_path, "gepa_dapo_grn", "0.2.1")
+
+    assert "No wheel found for package 'gepa_dapo_grn' version '0.2.1'" in str(exc_info.value)
 
 
 def test_find_single_wheel_raises_for_ambiguous_matches(tmp_path: Path) -> None:
@@ -29,5 +31,9 @@ def test_find_single_wheel_raises_for_ambiguous_matches(tmp_path: Path) -> None:
     first.write_text("one", encoding="utf-8")
     second.write_text("two", encoding="utf-8")
 
-    with pytest.raises(FileExistsError):
+    with pytest.raises(FileExistsError) as exc_info:
         find_single_wheel(tmp_path, "gepa_dapo_grn", "0.2.1")
+
+    assert "Multiple wheels found for package 'gepa_dapo_grn' version '0.2.1'" in str(
+        exc_info.value
+    )
