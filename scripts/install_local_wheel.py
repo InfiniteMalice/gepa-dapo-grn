@@ -13,6 +13,8 @@ SRC_PATH = REPO_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+DEPRECATED_VERSIONS: tuple[str, ...] = ("0.1.0",)
+
 
 def _load_project_version(pyproject_path: Path) -> str:
     try:
@@ -86,6 +88,16 @@ def _safe_delete_wheel(wheel_path: Path) -> None:
         )
 
 
+def _versions_to_remove(user_requested_versions: list[str]) -> list[str]:
+    """Return ordered unique versions to remove from dist before installation."""
+    versions = [*DEPRECATED_VERSIONS, *user_requested_versions]
+    deduped_versions: list[str] = []
+    for version in versions:
+        if version not in deduped_versions:
+            deduped_versions.append(version)
+    return deduped_versions
+
+
 def main() -> int:
     args = _parse_args()
     repo_root = REPO_ROOT
@@ -95,8 +107,9 @@ def main() -> int:
     project_version = _load_project_version(pyproject_path)
     package_prefix = "gepa_dapo_grn"
 
-    if dist_dir.exists() and args.remove_version:
-        for version in args.remove_version:
+    versions_to_remove = _versions_to_remove(args.remove_version)
+    if dist_dir.exists() and versions_to_remove:
+        for version in versions_to_remove:
             for wheel_path in dist_dir.glob(f"{package_prefix}-{version}-*.whl"):
                 _safe_delete_wheel(wheel_path)
 
