@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -12,7 +13,8 @@ def find_single_wheel(dist_dir: Path, package_prefix: str, version: str) -> Path
         FileNotFoundError: If no matching wheel exists.
         FileExistsError: If multiple matching wheels exist.
     """
-    pattern = f"{package_prefix}-{version}-*.whl"
+    normalized_prefix = re.sub(r"[-_.]+", "_", package_prefix).lower()
+    pattern = f"{normalized_prefix}-{version}-*.whl"
     matches = list(dist_dir.glob(pattern))
     if not matches:
         raise FileNotFoundError(

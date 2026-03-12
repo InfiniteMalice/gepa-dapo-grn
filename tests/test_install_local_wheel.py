@@ -83,10 +83,37 @@ def test_main_happy_path_uses_project_name_prefix_and_invokes_pip(
     assert calls
     assert calls[0][0:4] == [module.sys.executable, "-m", "pip", "install"]
     assert "--force-reinstall" in calls[0]
-    target_wheel = Path(calls[0][-1])
+    wheel_arg = next(arg for arg in calls[0] if arg.endswith(".whl"))
+    target_wheel = Path(wheel_arg)
     assert target_wheel.name == "gepa_dapo_grn-0.2.1-py3-none-any.whl"
     assert target_wheel.parent.name == "dist"
     assert not (tmp_path / "dist" / "gepa_dapo_grn-0.1.0-py3-none-any.whl").exists()
+
+
+def test_main_reports_ambiguous_wheels_and_returns_1(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    module = _load_installer_module()
+    _write_project_layout(tmp_path)
+    (tmp_path / "dist" / "gepa_dapo_grn-0.2.1-py3-none-any.whl").write_text("one", encoding="utf-8")
+    ambiguous = tmp_path / "dist" / "gepa_dapo_grn-0.2.1-alt-py3-none-any.whl"
+    ambiguous.write_text("two", encoding="utf-8")
+
+    monkeypatch.setattr(module, "SCRIPT_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        module,
+        "_parse_args",
+        lambda: SimpleNamespace(
+            dist_dir="dist", prune_other_versions=False, remove_version=[], pip_arg=[]
+        ),
+    )
+    monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
+
+    assert module.main() == 1
+    captured = capsys.readouterr()
+    assert "Multiple wheels found for package 'gepa_dapo_grn' version '0.2.1'" in captured.err
 
 
 def test_main_returns_subprocess_failure_code(monkeypatch, tmp_path: Path) -> None:

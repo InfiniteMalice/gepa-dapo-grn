@@ -162,11 +162,7 @@ def _load_find_single_wheel() -> Callable[..., Any]:
 def _versions_to_remove(user_requested_versions: list[str]) -> list[str]:
     """Return ordered unique versions to remove from dist before installation."""
     versions = [*DEPRECATED_VERSIONS, *user_requested_versions]
-    deduped_versions: list[str] = []
-    for version in versions:
-        if version not in deduped_versions:
-            deduped_versions.append(version)
-    return deduped_versions
+    return list(dict.fromkeys(versions))
 
 
 def main() -> int:

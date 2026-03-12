@@ -13,8 +13,8 @@
   local wheel versions before install.
 - Added `--remove-version` support to `scripts/install_local_wheel.py` so local wheel versions
   like `0.1.0` can be explicitly removed before install.
-- Fully deprecated local wheel v0.1.0 in the installer by removing it automatically
-  from install candidates before wheel selection.
+- Documented deprecation of local wheel v0.1.0 in `scripts/install_local_wheel.py`;
+  removal is opt-in via `--remove-version` and/or `--prune-other-versions`.
 - Tightened wheel selection: ambiguous multi-match wheel patterns now raise an explicit error
   instead of silently picking one file.
 

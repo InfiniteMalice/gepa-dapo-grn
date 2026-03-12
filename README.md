@@ -61,7 +61,7 @@ Use this sequence instead:
 
 ```bash
 rm -rf build dist *.egg-info
-python -m pip install --upgrade build
+python -m pip install --upgrade build tomli
 python -m build
 python scripts/install_local_wheel.py --prune-other-versions
 ```
@@ -81,7 +81,7 @@ artifacts left in `dist/`. Use a clean build and upload only the current version
 
 ```bash
 rm -rf build dist *.egg-info
-python -m pip install --upgrade build twine
+python -m pip install --upgrade build twine tomli
 python -m build
 PROJECT_VERSION=$(python - <<'PY2'
 from pathlib import Path

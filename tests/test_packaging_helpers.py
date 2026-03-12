@@ -37,3 +37,11 @@ def test_find_single_wheel_raises_for_ambiguous_matches(tmp_path: Path) -> None:
     assert "Multiple wheels found for package 'gepa_dapo_grn' version '0.2.1'" in str(
         exc_info.value
     )
+
+
+def test_find_single_wheel_normalizes_hyphenated_prefix(tmp_path: Path) -> None:
+    expected = tmp_path / "gepa_dapo_grn-0.2.1-py3-none-any.whl"
+    expected.write_text("new", encoding="utf-8")
+
+    actual = find_single_wheel(tmp_path, "gepa-dapo-grn", "0.2.1")
+    assert actual == expected
