@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -43,19 +44,23 @@ def _load_pyproject_data(pyproject_path: Path) -> dict[str, Any]:
 def _load_project_version(pyproject_path: Path) -> str:
     pyproject_data = _load_pyproject_data(pyproject_path)
     project_table = pyproject_data.get("project")
-    if not isinstance(project_table, dict):
-        raise RuntimeError(
-            f"Failed to parse {pyproject_path}: pyproject.toml missing 'project' table."
-        )
+    if isinstance(project_table, dict):
+        project_version = project_table.get("version")
+        if isinstance(project_version, str) and project_version.strip():
+            return project_version
 
-    project_version = project_table.get("version")
-    if not isinstance(project_version, str) or not project_version.strip():
-        raise RuntimeError(
-            "Failed to parse "
-            f"{pyproject_path}: pyproject.toml missing or invalid 'project.version' value."
-        )
+    tool_table = pyproject_data.get("tool")
+    if isinstance(tool_table, dict):
+        poetry_table = tool_table.get("poetry")
+        if isinstance(poetry_table, dict):
+            poetry_version = poetry_table.get("version")
+            if isinstance(poetry_version, str) and poetry_version.strip():
+                return poetry_version
 
-    return project_version
+    raise RuntimeError(
+        "Failed to parse "
+        f"{pyproject_path}: pyproject.toml missing or invalid 'project.version' value."
+    )
 
 
 def _load_project_name(pyproject_path: Path) -> str:
@@ -173,7 +178,7 @@ def main() -> int:
 
     install_cmd = [sys.executable, "-m", "pip", "install", str(wheel_path), *args.pip_arg]
     print("Installing wheel:", wheel_path)
-    print("Running:", " ".join(install_cmd))
+    print("Running:", shlex.join(install_cmd))
     return subprocess.call(install_cmd)
 
 

@@ -102,3 +102,44 @@ def test_main_reports_missing_wheel_and_returns_1(monkeypatch, tmp_path: Path, c
     assert module.main() == 1
     captured = capsys.readouterr()
     assert "No wheel found for package 'gepa_dapo_grn' version '0.2.1'" in captured.err
+
+
+def test_load_project_version_supports_poetry_fallback(tmp_path: Path) -> None:
+    module = _load_installer_module()
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        "\n".join(
+            [
+                "[tool.poetry]",
+                'name = "gepa-dapo-grn"',
+                'version = "9.9.9"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert module._load_project_version(pyproject_path) == "9.9.9"
+
+
+def test_main_logs_shell_quoted_command(monkeypatch, tmp_path: Path, capsys) -> None:
+    module = _load_installer_module()
+    _write_project_layout(tmp_path)
+    (tmp_path / "dist" / "gepa_dapo_grn-0.2.1-py3-none-any.whl").write_text("new", encoding="utf-8")
+
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        module,
+        "_parse_args",
+        lambda: SimpleNamespace(
+            dist_dir="dist",
+            prune_other_versions=False,
+            remove_version=[],
+            pip_arg=["--find-links", "path with spaces"],
+        ),
+    )
+    monkeypatch.setattr(module.subprocess, "call", lambda _cmd: 0)
+
+    assert module.main() == 0
+    captured = capsys.readouterr()
+    assert "'path with spaces'" in captured.out
