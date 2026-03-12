@@ -13,7 +13,17 @@ from gepa_dapo_grn._version import __version__
 
 
 def _load_pyproject() -> dict:
-    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    resolved_path = Path(__file__).resolve()
+    pyproject_path: Path | None = None
+    for parent in resolved_path.parents:
+        candidate = parent / "pyproject.toml"
+        if candidate.exists():
+            pyproject_path = candidate
+            break
+
+    if pyproject_path is None:
+        raise RuntimeError(f"Unable to find pyproject.toml from {resolved_path}")
+
     return tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
 
 

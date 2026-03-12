@@ -79,7 +79,8 @@ def test_main_happy_path_uses_project_name_prefix_and_invokes_pip(
 
     assert exit_code == 0
     assert calls
-    assert calls[0][0:3] == [module.sys.executable, "-m", "pip"]
+    assert calls[0][0:4] == [module.sys.executable, "-m", "pip", "install"]
+    assert "--force-reinstall" in calls[0]
     target_wheel = Path(calls[0][-1])
     assert target_wheel.name == "gepa_dapo_grn-0.2.1-py3-none-any.whl"
     assert target_wheel.parent.name == "dist"

@@ -163,10 +163,15 @@ def main() -> int:
     dist_dir = SCRIPT_REPO_ROOT / args.dist_dir
     pyproject_path = SCRIPT_REPO_ROOT / "pyproject.toml"
 
-    pyproject_data = _load_pyproject_data(pyproject_path)
-    project_version = _load_project_version(pyproject_path, pyproject_data)
-    project_name = _load_project_name(pyproject_path, pyproject_data)
-    package_prefix = _wheel_prefix_for_project_name(project_name)
+    try:
+        pyproject_data = _load_pyproject_data(pyproject_path)
+        project_version = _load_project_version(pyproject_path, pyproject_data)
+        project_name = _load_project_name(pyproject_path, pyproject_data)
+        package_prefix = _wheel_prefix_for_project_name(project_name)
+        find_single_wheel = _load_find_single_wheel()
+    except Exception as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
     versions_to_remove = _versions_to_remove(args.remove_version)
     if dist_dir.exists() and versions_to_remove:
@@ -181,8 +186,6 @@ def main() -> int:
                 continue
             _safe_delete_wheel(wheel_path)
 
-    find_single_wheel = _load_find_single_wheel()
-
     try:
         wheel_path = find_single_wheel(
             dist_dir=dist_dir,
@@ -193,7 +196,15 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    install_cmd = [sys.executable, "-m", "pip", "install", str(wheel_path), *args.pip_arg]
+    install_cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--force-reinstall",
+        str(wheel_path),
+        *args.pip_arg,
+    ]
     print("Installing wheel:", wheel_path)
     print("Running:", shlex.join(install_cmd))
     return subprocess.call(install_cmd)
