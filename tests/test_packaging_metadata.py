@@ -43,3 +43,9 @@ def test_dependency_constraints_remain_release_safe() -> None:
 
     optional_dependencies = project["optional-dependencies"]
     assert optional_dependencies["hf"] == ["transformers>=4.40,<5.0"]
+    assert optional_dependencies["dev"] == [
+        "pytest",
+        "ruff",
+        "black",
+        'tomli>=1.1.0; python_version < "3.11"',
+    ]

@@ -145,6 +145,23 @@ def test_load_project_version_supports_poetry_fallback(tmp_path: Path) -> None:
     assert module._load_project_version(pyproject_path) == "9.9.9"
 
 
+def test_load_project_name_supports_poetry_fallback(tmp_path: Path) -> None:
+    module = _load_installer_module()
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        "\n".join(
+            [
+                "[tool.poetry]",
+                'name = "my-project"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert module._load_project_name(pyproject_path) == "my-project"
+
+
 def test_main_logs_shell_quoted_command(monkeypatch, tmp_path: Path, capsys) -> None:
     module = _load_installer_module()
     _write_project_layout(tmp_path)
