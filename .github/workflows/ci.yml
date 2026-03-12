@@ -45,18 +45,19 @@ jobs:
 
       - name: Build sdist/wheel
         run: |
+          rm -rf build dist *.egg-info
           python -m pip install --upgrade pip
           pip install build twine
           python -m build
           twine check dist/*
 
       - name: Smoke install wheel
+        shell: bash
         run: |
           python -m venv /tmp/venv
-          . /tmp/venv/bin/activate
-          pip install --upgrade pip
-          pip install dist/*.whl
-          python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
+          /tmp/venv/bin/python -m pip install --upgrade pip
+          /tmp/venv/bin/python scripts/install_local_wheel.py --prune-other-versions
+          /tmp/venv/bin/python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
 
   lint:
     runs-on: ubuntu-latest
