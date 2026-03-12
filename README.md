@@ -73,6 +73,34 @@ current version wheel and does not delete files in `dist/`. Cleanup is opt-in:
 and `--prune-other-versions` removes other non-current wheel files so pip
 receives exactly one path.
 
+
+## Publishing to PyPI safely
+
+A common cause of `InvalidDistribution` during `twine upload dist/*` is stale or non-package
+artifacts left in `dist/`. Use a clean build and upload only the current version artifacts:
+
+```bash
+rm -rf build dist *.egg-info
+python -m pip install --upgrade build twine
+python -m build
+PROJECT_VERSION=$(python - <<'PY2'
+from pathlib import Path
+try:
+    import tomllib as toml
+except ImportError:
+    import tomli as toml
+
+data = toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
+print(data['project']['version'])
+PY2
+)
+twine check dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
+twine upload dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
+```
+
+This avoids uploading unrelated files and ensures both `Name` and `Version` metadata come from the
+freshly built distributions only.
+
 ## Public API
 
 Public API is defined by `__init__.py` exports. Anything not exported there is considered
