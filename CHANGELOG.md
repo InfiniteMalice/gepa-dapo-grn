@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.1] - 2026-03-12
+
+- Audited packaging metadata and synchronized the project version across `pyproject.toml`,
+  runtime `__version__`, and release documentation to avoid release/upload mismatches.
+- Added packaging metadata tests to catch dependency/version drift before publishing.
+- Fixed wheel smoke-install workflow to install exactly one freshly built wheel, avoiding pip
+  resolver conflicts when multiple package versions exist in `dist/`.
+- Documented safe local build/install commands that select a single wheel version instead of
+  using `dist/*.whl`.
+- Added `scripts/install_local_wheel.py` to install only one wheel and optionally prune older
+  local wheel versions before install.
+- Added `--remove-version` support to `scripts/install_local_wheel.py` so local wheel versions
+  like `0.1.0` can be explicitly removed before install.
+- Documented deprecation of local wheel v0.1.0 in `scripts/install_local_wheel.py`;
+  removal is opt-in via `--remove-version` and/or `--prune-other-versions`.
+- Tightened wheel selection: ambiguous multi-match wheel patterns now raise an explicit error
+  instead of silently picking one file.
+
 ## [0.2.0] - 2026-02-15
 
 - Removed built-in explicit deception penalties; deception-like signals are treated as
