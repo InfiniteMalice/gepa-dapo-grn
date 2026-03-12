@@ -7,11 +7,13 @@ import argparse
 import shlex
 import subprocess
 import sys
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_PATH = REPO_ROOT / "src"
+SCRIPT_REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = SCRIPT_REPO_ROOT
+SRC_PATH = SCRIPT_REPO_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
@@ -131,6 +133,16 @@ def _safe_delete_wheel(wheel_path: Path) -> None:
         )
 
 
+def _load_find_single_wheel():
+    packaging_path = SCRIPT_REPO_ROOT / "src" / "gepa_dapo_grn" / "_packaging.py"
+    spec = spec_from_file_location("gepa_dapo_grn._packaging", packaging_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load packaging helpers from {packaging_path}")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.find_single_wheel
+
+
 def _versions_to_remove(user_requested_versions: list[str]) -> list[str]:
     """Return ordered unique versions to remove from dist before installation."""
     versions = [*DEPRECATED_VERSIONS, *user_requested_versions]
@@ -164,7 +176,7 @@ def main() -> int:
                 continue
             _safe_delete_wheel(wheel_path)
 
-    from gepa_dapo_grn._packaging import find_single_wheel
+    find_single_wheel = _load_find_single_wheel()
 
     try:
         wheel_path = find_single_wheel(
