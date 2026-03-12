@@ -56,6 +56,7 @@ jobs:
         run: |
           python -m venv /tmp/venv
           /tmp/venv/bin/python -m pip install --upgrade pip
+          /tmp/venv/bin/python -m pip install tomli
           /tmp/venv/bin/python scripts/install_local_wheel.py --prune-other-versions
           /tmp/venv/bin/python -c "import gepa_dapo_grn; print('import ok, version:', getattr(gepa_dapo_grn, '__version__', 'unknown'))"
 

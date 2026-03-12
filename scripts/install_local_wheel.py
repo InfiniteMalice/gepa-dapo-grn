@@ -10,7 +10,7 @@ import subprocess
 import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = SCRIPT_REPO_ROOT / "src"
@@ -147,7 +147,7 @@ def _safe_delete_wheel(wheel_path: Path) -> None:
         )
 
 
-def _load_find_single_wheel():
+def _load_find_single_wheel() -> Callable[..., Any]:
     # Keep this dynamic import to avoid importing package runtime dependencies
     # (e.g. torch via __init__) before wheel installation in smoke checks.
     packaging_path = SCRIPT_REPO_ROOT / "src" / "gepa_dapo_grn" / "_packaging.py"
