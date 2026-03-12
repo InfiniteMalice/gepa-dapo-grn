@@ -43,15 +43,18 @@ def _load_pyproject_data(pyproject_path: Path) -> dict[str, Any]:
     return data
 
 
-def _load_project_version(pyproject_path: Path) -> str:
-    pyproject_data = _load_pyproject_data(pyproject_path)
-    project_table = pyproject_data.get("project")
+def _load_project_version(
+    pyproject_path: Path,
+    pyproject_data: dict[str, Any] | None = None,
+) -> str:
+    data = pyproject_data if pyproject_data is not None else _load_pyproject_data(pyproject_path)
+    project_table = data.get("project")
     if isinstance(project_table, dict):
         project_version = project_table.get("version")
         if isinstance(project_version, str) and project_version.strip():
             return project_version
 
-    tool_table = pyproject_data.get("tool")
+    tool_table = data.get("tool")
     if isinstance(tool_table, dict):
         poetry_table = tool_table.get("poetry")
         if isinstance(poetry_table, dict):
@@ -65,16 +68,19 @@ def _load_project_version(pyproject_path: Path) -> str:
     )
 
 
-def _load_project_name(pyproject_path: Path) -> str:
-    pyproject_data = _load_pyproject_data(pyproject_path)
+def _load_project_name(
+    pyproject_path: Path,
+    pyproject_data: dict[str, Any] | None = None,
+) -> str:
+    data = pyproject_data if pyproject_data is not None else _load_pyproject_data(pyproject_path)
 
-    project_table = pyproject_data.get("project")
+    project_table = data.get("project")
     if isinstance(project_table, dict):
         project_name = project_table.get("name")
         if isinstance(project_name, str) and project_name.strip():
             return project_name
 
-    tool_table = pyproject_data.get("tool")
+    tool_table = data.get("tool")
     if isinstance(tool_table, dict):
         poetry_table = tool_table.get("poetry")
         if isinstance(poetry_table, dict):
@@ -159,8 +165,9 @@ def main() -> int:
     dist_dir = repo_root / args.dist_dir
     pyproject_path = repo_root / "pyproject.toml"
 
-    project_version = _load_project_version(pyproject_path)
-    project_name = _load_project_name(pyproject_path)
+    pyproject_data = _load_pyproject_data(pyproject_path)
+    project_version = _load_project_version(pyproject_path, pyproject_data)
+    project_name = _load_project_name(pyproject_path, pyproject_data)
     package_prefix = _wheel_prefix_for_project_name(project_name)
 
     versions_to_remove = _versions_to_remove(args.remove_version)
