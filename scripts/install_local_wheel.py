@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import shlex
 import subprocess
 import sys
@@ -16,6 +17,8 @@ SRC_PATH = SCRIPT_REPO_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+# Local wheel 0.1.0 is deprecated because mixed 0.1.0/0.2.x installs
+# caused resolver conflicts in local/CI packaging flows (see changelog notes).
 DEPRECATED_VERSIONS: tuple[str, ...] = ("0.1.0",)
 
 
@@ -94,7 +97,13 @@ def _load_project_name(
 
 
 def _wheel_prefix_for_project_name(project_name: str) -> str:
-    return project_name.replace("-", "_")
+    """Normalize project name into a wheel filename prefix."""
+    normalized = re.sub(r"[^0-9A-Za-z]+", "_", project_name.lower())
+    normalized = re.sub(r"_+", "_", normalized)
+    normalized = normalized.strip("_")
+    if not normalized:
+        raise RuntimeError(f"Invalid project name for wheel prefix: {project_name!r}")
+    return normalized
 
 
 def _parse_args() -> argparse.Namespace:
@@ -139,6 +148,8 @@ def _safe_delete_wheel(wheel_path: Path) -> None:
 
 
 def _load_find_single_wheel():
+    # Keep this dynamic import to avoid importing package runtime dependencies
+    # (e.g. torch via __init__) before wheel installation in smoke checks.
     packaging_path = SCRIPT_REPO_ROOT / "src" / "gepa_dapo_grn" / "_packaging.py"
     spec = spec_from_file_location("gepa_dapo_grn._packaging", packaging_path)
     if spec is None or spec.loader is None:

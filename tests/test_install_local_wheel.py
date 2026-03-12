@@ -165,3 +165,19 @@ def test_main_logs_shell_quoted_command(monkeypatch, tmp_path: Path, capsys) -> 
     assert module.main() == 0
     captured = capsys.readouterr()
     assert "'path with spaces'" in captured.out
+
+
+def test_wheel_prefix_normalization_handles_special_chars() -> None:
+    module = _load_installer_module()
+    assert module._wheel_prefix_for_project_name("My.Package---Name") == "my_package_name"
+    assert module._wheel_prefix_for_project_name("__A..B__") == "a_b"
+
+
+def test_wheel_prefix_normalization_rejects_empty_result() -> None:
+    module = _load_installer_module()
+    try:
+        module._wheel_prefix_for_project_name("---")
+    except RuntimeError as exc:
+        assert "Invalid project name for wheel prefix" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for invalid project name")
