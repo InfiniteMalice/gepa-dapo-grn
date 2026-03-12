@@ -67,9 +67,11 @@ python scripts/install_local_wheel.py --prune-other-versions
 ```
 
 This follows pip's suggested fix to remove conflicting versions before install:
-`scripts/install_local_wheel.py` now automatically removes deprecated or older
-local wheel artifacts before install, and `--prune-other-versions` removes any
-other non-current wheel files so pip receives exactly one path.
+by default, `scripts/install_local_wheel.py` only locates and installs the
+current version wheel and does not delete files in `dist/`. Cleanup is opt-in:
+`--remove-version <version>` deletes wheel files for the specified version(s),
+and `--prune-other-versions` removes other non-current wheel files so pip
+receives exactly one path.
 
 ## Public API
 

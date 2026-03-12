@@ -13,6 +13,21 @@ def _load_installer_module():
     return module
 
 
+def _fake_find_single_wheel(dist_dir: Path, package_prefix: str, version: str) -> Path:
+    pattern = f"{package_prefix}-{version}-*.whl"
+    matches = list(dist_dir.glob(pattern))
+    if not matches:
+        raise FileNotFoundError(
+            f"No wheel found for package {package_prefix!r} version {version!r} in {dist_dir}."
+        )
+    if len(matches) > 1:
+        raise FileExistsError(
+            "Multiple wheels found for package "
+            f"{package_prefix!r} version {version!r} in {dist_dir}."
+        )
+    return matches[0]
+
+
 def _write_project_layout(tmp_path: Path, version: str = "0.2.1") -> None:
     (tmp_path / "pyproject.toml").write_text(
         "\n".join(
@@ -42,7 +57,7 @@ def test_main_happy_path_uses_project_name_prefix_and_invokes_pip(
     (tmp_path / "dist" / "gepa_dapo_grn-0.2.1-py3-none-any.whl").write_text("new", encoding="utf-8")
     (tmp_path / "dist" / "gepa_dapo_grn-0.1.0-py3-none-any.whl").write_text("old", encoding="utf-8")
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "SCRIPT_REPO_ROOT", tmp_path)
     monkeypatch.setattr(
         module,
         "_parse_args",
@@ -58,6 +73,7 @@ def test_main_happy_path_uses_project_name_prefix_and_invokes_pip(
         return 0
 
     monkeypatch.setattr(module.subprocess, "call", _fake_call)
+    monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
 
     exit_code = module.main()
 
@@ -75,7 +91,7 @@ def test_main_returns_subprocess_failure_code(monkeypatch, tmp_path: Path) -> No
     _write_project_layout(tmp_path)
     (tmp_path / "dist" / "gepa_dapo_grn-0.2.1-py3-none-any.whl").write_text("new", encoding="utf-8")
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "SCRIPT_REPO_ROOT", tmp_path)
     monkeypatch.setattr(
         module,
         "_parse_args",
@@ -84,6 +100,7 @@ def test_main_returns_subprocess_failure_code(monkeypatch, tmp_path: Path) -> No
         ),
     )
     monkeypatch.setattr(module.subprocess, "call", lambda _cmd: 9)
+    monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
 
     assert module.main() == 9
 
@@ -92,7 +109,7 @@ def test_main_reports_missing_wheel_and_returns_1(monkeypatch, tmp_path: Path, c
     module = _load_installer_module()
     _write_project_layout(tmp_path)
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "SCRIPT_REPO_ROOT", tmp_path)
     monkeypatch.setattr(
         module,
         "_parse_args",
@@ -100,6 +117,7 @@ def test_main_reports_missing_wheel_and_returns_1(monkeypatch, tmp_path: Path, c
             dist_dir="dist", prune_other_versions=False, remove_version=[], pip_arg=[]
         ),
     )
+    monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
 
     assert module.main() == 1
     captured = capsys.readouterr()
@@ -129,7 +147,7 @@ def test_main_logs_shell_quoted_command(monkeypatch, tmp_path: Path, capsys) -> 
     _write_project_layout(tmp_path)
     (tmp_path / "dist" / "gepa_dapo_grn-0.2.1-py3-none-any.whl").write_text("new", encoding="utf-8")
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "SCRIPT_REPO_ROOT", tmp_path)
     monkeypatch.setattr(
         module,
         "_parse_args",
@@ -141,6 +159,7 @@ def test_main_logs_shell_quoted_command(monkeypatch, tmp_path: Path, capsys) -> 
         ),
     )
     monkeypatch.setattr(module.subprocess, "call", lambda _cmd: 0)
+    monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
 
     assert module.main() == 0
     captured = capsys.readouterr()

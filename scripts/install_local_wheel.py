@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_REPO_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = SCRIPT_REPO_ROOT
 SRC_PATH = SCRIPT_REPO_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
@@ -161,9 +160,8 @@ def _versions_to_remove(user_requested_versions: list[str]) -> list[str]:
 
 def main() -> int:
     args = _parse_args()
-    repo_root = REPO_ROOT
-    dist_dir = repo_root / args.dist_dir
-    pyproject_path = repo_root / "pyproject.toml"
+    dist_dir = SCRIPT_REPO_ROOT / args.dist_dir
+    pyproject_path = SCRIPT_REPO_ROOT / "pyproject.toml"
 
     pyproject_data = _load_pyproject_data(pyproject_path)
     project_version = _load_project_version(pyproject_path, pyproject_data)
