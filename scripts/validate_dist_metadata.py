@@ -91,7 +91,8 @@ def _validate_artifact(artifact_path: Path) -> list[str]:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate Name/Version metadata in wheel and sdist artifacts before twine upload."
+            "Validate Name, Version, and Metadata-Version in wheel and sdist artifacts "
+            "before twine upload."
         )
     )
     parser.add_argument("artifacts", nargs="+", help="Paths to .whl and .tar.gz files")
