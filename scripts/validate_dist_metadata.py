@@ -234,14 +234,25 @@ def _max_supported_pkginfo_metadata_version() -> str | None:
 def _pkginfo_supports_metadata_version(pkginfo_module: object, metadata_version: str) -> bool:
     wheel_name = "probe_pkg-0.0.0-py3-none-any.whl"
     metadata_member = "probe_pkg-0.0.0.dist-info/METADATA"
-    metadata_text = f"Metadata-Version: {metadata_version}\n" "Name: probe-pkg\n" "Version: 0.0.0\n"
+    metadata_text = "\n".join(
+        [
+            f"Metadata-Version: {metadata_version}",
+            "Name: probe-pkg",
+            "Version: 0.0.0",
+            "",
+        ]
+    )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         wheel_path = Path(temp_dir) / wheel_name
         with zipfile.ZipFile(wheel_path, "w") as wheel:
             wheel.writestr(metadata_member, metadata_text)
 
-        parsed = pkginfo_module.Wheel(str(wheel_path))
+        try:
+            parsed = pkginfo_module.Wheel(str(wheel_path))
+        except Exception:
+            return False
+
         name = getattr(parsed, "name", None)
         version = getattr(parsed, "version", None)
 
