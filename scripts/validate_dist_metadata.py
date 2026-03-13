@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import importlib
 import sys
 import tarfile
+import tempfile
 import zipfile
 from email.parser import Parser
+from functools import lru_cache
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
@@ -201,18 +202,50 @@ def _metadata_version_tuple(metadata_version: str) -> tuple[int, ...]:
         raise RuntimeError(f"Invalid Metadata-Version value: {metadata_version!r}") from exc
 
 
+@lru_cache(maxsize=1)
 def _max_supported_pkginfo_metadata_version() -> str | None:
+    """Return the max metadata version that local pkginfo can parse, if detectable.
+
+    pkginfo does not expose a dedicated public constant for supported metadata versions.
+    As a documented fallback, we probe support via its public ``pkginfo.Wheel`` API by
+    parsing synthetic wheel files across known metadata versions.
+    """
     try:
-        distribution = importlib.import_module("pkginfo.distribution")
+        import pkginfo
     except ImportError:
         return None
 
-    header_attrs = getattr(distribution, "HEADER_ATTRS", None)
-    if not isinstance(header_attrs, dict) or not header_attrs:
+    if not hasattr(pkginfo, "Wheel"):
         return None
 
-    version_strings = [str(version) for version in header_attrs]
-    return max(version_strings, key=_metadata_version_tuple)
+    candidate_versions = ["2.5", "2.4", "2.3", "2.2", "2.1", "2.0", "1.2", "1.1", "1.0"]
+    supported_versions: list[str] = []
+
+    for candidate_version in candidate_versions:
+        if _pkginfo_supports_metadata_version(pkginfo, candidate_version):
+            supported_versions.append(candidate_version)
+
+    if not supported_versions:
+        return None
+
+    return max(supported_versions, key=_metadata_version_tuple)
+
+
+def _pkginfo_supports_metadata_version(pkginfo_module: object, metadata_version: str) -> bool:
+    wheel_name = "probe_pkg-0.0.0-py3-none-any.whl"
+    metadata_member = "probe_pkg-0.0.0.dist-info/METADATA"
+    metadata_text = f"Metadata-Version: {metadata_version}\n" "Name: probe-pkg\n" "Version: 0.0.0\n"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        wheel_path = Path(temp_dir) / wheel_name
+        with zipfile.ZipFile(wheel_path, "w") as wheel:
+            wheel.writestr(metadata_member, metadata_text)
+
+        parsed = pkginfo_module.Wheel(str(wheel_path))
+        name = getattr(parsed, "name", None)
+        version = getattr(parsed, "version", None)
+
+    return bool(name and version)
 
 
 def _parse_args() -> argparse.Namespace:
