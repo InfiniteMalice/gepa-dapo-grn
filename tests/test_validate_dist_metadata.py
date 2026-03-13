@@ -198,3 +198,27 @@ def test_validate_artifact_accepts_zip_sdist_with_required_fields(tmp_path: Path
         )
 
     assert module._validate_artifact(sdist_path) == []
+
+
+def test_validate_artifact_accepts_hyphenated_sdist_version(tmp_path: Path) -> None:
+    module = _load_validator_module()
+    sdist = _write_sdist_with_pkg_info(
+        tmp_path,
+        "Metadata-Version: 2.1\nName: my-package\nVersion: 1.0+abc-def\n",
+        "my_package-1.0+abc-def.tar.gz",
+    )
+
+    assert module._validate_artifact(sdist) == []
+
+
+def test_validate_artifact_accepts_hyphenated_zip_sdist_version(tmp_path: Path) -> None:
+    module = _load_validator_module()
+    sdist_path = tmp_path / "my_package-1.0+abc-def.zip"
+
+    with zipfile.ZipFile(sdist_path, "w") as sdist:
+        sdist.writestr(
+            "my_package-1.0+abc-def/PKG-INFO",
+            "Metadata-Version: 2.1\nName: my-package\nVersion: 1.0+abc-def\n",
+        )
+
+    assert module._validate_artifact(sdist_path) == []

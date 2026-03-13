@@ -11,6 +11,8 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+from packaging.version import InvalidVersion, Version
+
 REQUIRED_FIELDS = ("Metadata-Version", "Name", "Version")
 
 
@@ -49,11 +51,22 @@ def _expected_identity_from_artifact_path(artifact_path: Path) -> tuple[str, str
     else:
         raise RuntimeError(f"{artifact_path}: unsupported artifact type")
 
-    if "-" not in archive_stem:
+    split_points = [index for index, char in enumerate(archive_stem) if char == "-"]
+    if not split_points:
         raise RuntimeError(f"{artifact_path}: invalid source distribution filename")
 
-    expected_name, expected_version = archive_stem.rsplit("-", 1)
-    return expected_name, expected_version
+    for split_index in reversed(split_points):
+        expected_name = archive_stem[:split_index]
+        expected_version = archive_stem[split_index + 1 :]
+        if not expected_name or not expected_version:
+            continue
+        try:
+            Version(expected_version)
+        except InvalidVersion:
+            continue
+        return expected_name, expected_version
+
+    raise RuntimeError(f"{artifact_path}: invalid source distribution filename")
 
 
 def _expected_wheel_metadata_member(artifact_path: Path) -> str:
