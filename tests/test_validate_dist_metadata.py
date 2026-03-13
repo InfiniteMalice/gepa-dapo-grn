@@ -18,8 +18,18 @@ def _load_validator_module():
 
 def _write_wheel_with_metadata(tmp_path: Path, metadata_text: str, wheel_name: str) -> Path:
     wheel_path = tmp_path / wheel_name
+    wheel_stem = wheel_name.removesuffix(".whl")
+    parts = wheel_stem.split("-")
+    if len(parts) >= 2:
+        distribution = parts[0]
+        version = parts[1]
+    else:
+        distribution = "pkg"
+        version = "0.0.0"
+
+    metadata_member = f"{distribution}-{version}.dist-info/METADATA"
     with zipfile.ZipFile(wheel_path, "w") as wheel:
-        wheel.writestr("pkg-0.0.0.dist-info/METADATA", metadata_text)
+        wheel.writestr(metadata_member, metadata_text)
     return wheel_path
 
 
@@ -175,3 +185,16 @@ def test_validate_artifact_reports_pkginfo_twine_metadata_version_mismatch(
 
     assert len(errors) == 1
     assert "Metadata-Version 2.4 exceeds locally supported pkginfo/twine maximum 2.2" in errors[0]
+
+
+def test_validate_artifact_accepts_zip_sdist_with_required_fields(tmp_path: Path) -> None:
+    module = _load_validator_module()
+    sdist_path = tmp_path / "gepa_dapo_grn-0.2.1.zip"
+
+    with zipfile.ZipFile(sdist_path, "w") as sdist:
+        sdist.writestr(
+            "gepa_dapo_grn-0.2.1/PKG-INFO",
+            "Metadata-Version: 2.1\nName: gepa-dapo-grn\nVersion: 0.2.1\n",
+        )
+
+    assert module._validate_artifact(sdist_path) == []

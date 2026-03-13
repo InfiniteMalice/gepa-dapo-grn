@@ -90,31 +90,52 @@ def _read_wheel_metadata(artifact_path: Path) -> str:
 
 
 def _read_sdist_metadata(artifact_path: Path) -> str:
-    with tarfile.open(artifact_path, "r:gz") as sdist:
-        root_pkg_info_candidates = [
-            member
-            for member in sdist.getmembers()
-            if member.name.endswith("/PKG-INFO") and member.name.count("/") == 1
-        ]
+    if artifact_path.suffixes[-2:] == [".tar", ".gz"]:
+        with tarfile.open(artifact_path, "r:gz") as sdist:
+            root_pkg_info_candidates = [
+                member
+                for member in sdist.getmembers()
+                if member.name.endswith("/PKG-INFO") and member.name.count("/") == 1
+            ]
 
-        if len(root_pkg_info_candidates) != 1:
-            raise RuntimeError(
-                f"{artifact_path}: expected exactly one root PKG-INFO file, "
-                f"found {len(root_pkg_info_candidates)}"
-            )
+            if len(root_pkg_info_candidates) != 1:
+                raise RuntimeError(
+                    f"{artifact_path}: expected exactly one root PKG-INFO file, "
+                    f"found {len(root_pkg_info_candidates)}"
+                )
 
-        pkg_info_file = sdist.extractfile(root_pkg_info_candidates[0])
-        if pkg_info_file is None:
-            raise RuntimeError(f"{artifact_path}: PKG-INFO is not readable")
-        metadata_bytes = pkg_info_file.read()
+            pkg_info_file = sdist.extractfile(root_pkg_info_candidates[0])
+            if pkg_info_file is None:
+                raise RuntimeError(f"{artifact_path}: PKG-INFO is not readable")
+            metadata_bytes = pkg_info_file.read()
 
-    return metadata_bytes.decode("utf-8")
+        return metadata_bytes.decode("utf-8")
+
+    if artifact_path.suffix == ".zip":
+        with zipfile.ZipFile(artifact_path) as sdist:
+            root_pkg_info_candidates = [
+                member_name
+                for member_name in sdist.namelist()
+                if member_name.endswith("/PKG-INFO") and member_name.count("/") == 1
+            ]
+
+            if len(root_pkg_info_candidates) != 1:
+                raise RuntimeError(
+                    f"{artifact_path}: expected exactly one root PKG-INFO file, "
+                    f"found {len(root_pkg_info_candidates)}"
+                )
+
+            metadata_bytes = sdist.read(root_pkg_info_candidates[0])
+
+        return metadata_bytes.decode("utf-8")
+
+    raise RuntimeError(f"{artifact_path}: unsupported source distribution type")
 
 
 def _load_metadata(artifact_path: Path) -> dict[str, str]:
     if artifact_path.suffix == ".whl":
         raw_metadata = _read_wheel_metadata(artifact_path)
-    elif artifact_path.suffixes[-2:] == [".tar", ".gz"]:
+    elif artifact_path.suffixes[-2:] == [".tar", ".gz"] or artifact_path.suffix == ".zip":
         raw_metadata = _read_sdist_metadata(artifact_path)
     else:
         raise RuntimeError(f"{artifact_path}: unsupported artifact type")
