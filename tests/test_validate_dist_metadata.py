@@ -60,6 +60,20 @@ def test_validate_artifact_rejects_missing_fields_in_wheel(tmp_path: Path) -> No
     assert "missing required metadata fields: Name, Version" in errors[0]
 
 
+def test_validate_artifact_rejects_missing_fields_in_sdist(tmp_path: Path) -> None:
+    module = _load_validator_module()
+    sdist = _write_sdist_with_pkg_info(
+        tmp_path,
+        "Metadata-Version: 2.1\n",
+        "broken-0.0.0.tar.gz",
+    )
+
+    errors = module._validate_artifact(sdist)
+
+    assert len(errors) == 1
+    assert "missing required metadata fields: Name, Version" in errors[0]
+
+
 def test_validate_artifact_accepts_sdist_with_required_fields(tmp_path: Path) -> None:
     module = _load_validator_module()
     sdist = _write_sdist_with_pkg_info(

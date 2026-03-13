@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import tarfile
 import zipfile
 from email.parser import Parser
@@ -98,7 +99,7 @@ def main() -> int:
 
     if errors:
         for error in errors:
-            print(error)
+            print(error, file=sys.stderr)
         return 1
 
     return 0
