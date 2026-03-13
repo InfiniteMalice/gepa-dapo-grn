@@ -50,7 +50,7 @@ def test_versions_to_remove_includes_deprecated_default() -> None:
     assert module._versions_to_remove([]) == ["0.1.0"]
 
 
-def test_versions_to_remove_merges_dedupes_and_preserves_user_order() -> None:
+def test_versions_to_remove_merges_default_then_dedupes_user_versions() -> None:
     module = _load_installer_module()
 
     versions = module._versions_to_remove(["0.3.0", "0.1.0", "0.3.0", "0.2.0", "0.2.0"])
