@@ -94,6 +94,9 @@ data = toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
 print(data['project']['version'])
 PY2
 )
+python scripts/validate_dist_metadata.py \
+  dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz \
+  dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 twine check dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 twine upload dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 ```
