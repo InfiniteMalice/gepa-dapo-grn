@@ -61,9 +61,9 @@ Use this sequence instead:
 
 ```bash
 rm -rf build dist *.egg-info
-python -m pip install --upgrade build tomli
-python -m build
-python scripts/install_local_wheel.py --prune-other-versions
+python3 -m pip install --upgrade build tomli
+python3 -m build
+python3 scripts/install_local_wheel.py --prune-other-versions
 ```
 
 This follows pip's suggested fix to remove conflicting versions before install:
@@ -81,9 +81,9 @@ artifacts left in `dist/`. Use a clean build and upload only the current version
 
 ```bash
 rm -rf build dist *.egg-info
-python -m pip install --upgrade build twine tomli
+python3 -m pip install --upgrade build twine tomli
 # Build isolation uses pyproject build-system pins (setuptools<77) for twine compatibility.
-python -m build
+python3 -m build
 PROJECT_VERSION=$(python - <<'PY2'
 from pathlib import Path
 try:
