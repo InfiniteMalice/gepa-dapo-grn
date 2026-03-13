@@ -82,6 +82,7 @@ artifacts left in `dist/`. Use a clean build and upload only the current version
 ```bash
 rm -rf build dist *.egg-info
 python -m pip install --upgrade build twine tomli
+# Build isolation uses pyproject build-system pins (setuptools<77) for twine compatibility.
 python -m build
 PROJECT_VERSION=$(python - <<'PY2'
 from pathlib import Path
@@ -94,12 +95,22 @@ data = toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
 print(data['project']['version'])
 PY2
 )
+python scripts/validate_dist_metadata.py \
+  dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz \
+  dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 twine check dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 twine upload dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${PROJECT_VERSION}-*.whl
 ```
 
 This avoids uploading unrelated files and ensures both `Name` and `Version` metadata come from the
 freshly built distributions only.
+
+If `twine check` reports supported metadata versions only up to `2.2` while your wheel has a newer
+`Metadata-Version` (for example `2.4` from newer setuptools), upgrade your upload tooling first:
+
+```bash
+python -m pip install --upgrade twine pkginfo
+```
 
 ## Public API
 
