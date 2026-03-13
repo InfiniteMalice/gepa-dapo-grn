@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import sys
 import tarfile
 import zipfile
@@ -83,9 +84,42 @@ def _load_metadata(artifact_path: Path) -> dict[str, str]:
 def _validate_artifact(artifact_path: Path) -> list[str]:
     metadata = _load_metadata(artifact_path)
     missing_fields = [field_name for field_name, value in metadata.items() if not value.strip()]
-    if not missing_fields:
+    if missing_fields:
+        return [f"{artifact_path}: missing required metadata fields: {', '.join(missing_fields)}"]
+
+    metadata_version = metadata["Metadata-Version"]
+    max_supported = _max_supported_pkginfo_metadata_version()
+    if max_supported is None:
         return []
-    return [f"{artifact_path}: missing required metadata fields: {', '.join(missing_fields)}"]
+
+    if _metadata_version_tuple(metadata_version) > _metadata_version_tuple(max_supported):
+        return [
+            f"{artifact_path}: Metadata-Version {metadata_version} exceeds locally supported "
+            f"pkginfo/twine maximum {max_supported}. Upgrade twine/pkginfo before upload."
+        ]
+
+    return []
+
+
+def _metadata_version_tuple(metadata_version: str) -> tuple[int, ...]:
+    try:
+        return tuple(int(part) for part in metadata_version.split("."))
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid Metadata-Version value: {metadata_version!r}") from exc
+
+
+def _max_supported_pkginfo_metadata_version() -> str | None:
+    try:
+        distribution = importlib.import_module("pkginfo.distribution")
+    except ImportError:
+        return None
+
+    header_attrs = getattr(distribution, "HEADER_ATTRS", None)
+    if not isinstance(header_attrs, dict) or not header_attrs:
+        return None
+
+    version_strings = [str(version) for version in header_attrs]
+    return max(version_strings, key=_metadata_version_tuple)
 
 
 def _parse_args() -> argparse.Namespace:

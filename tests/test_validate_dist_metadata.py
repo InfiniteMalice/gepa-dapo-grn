@@ -121,3 +121,21 @@ def test_read_wheel_metadata_prefers_expected_dist_info_path(tmp_path: Path) -> 
         )
 
     assert module._validate_artifact(wheel_path) == []
+
+
+def test_validate_artifact_reports_pkginfo_twine_metadata_version_mismatch(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_validator_module()
+    wheel = _write_wheel_with_metadata(
+        tmp_path,
+        "Metadata-Version: 2.4\nName: gepa-dapo-grn\nVersion: 0.2.1\n",
+        "pkg-0.0.0-py3-none-any.whl",
+    )
+    monkeypatch.setattr(module, "_max_supported_pkginfo_metadata_version", lambda: "2.2")
+
+    errors = module._validate_artifact(wheel)
+
+    assert len(errors) == 1
+    assert "Metadata-Version 2.4 exceeds locally supported pkginfo/twine maximum 2.2" in errors[0]

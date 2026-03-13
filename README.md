@@ -104,6 +104,13 @@ twine upload dist/gepa_dapo_grn-${PROJECT_VERSION}.tar.gz dist/gepa_dapo_grn-${P
 This avoids uploading unrelated files and ensures both `Name` and `Version` metadata come from the
 freshly built distributions only.
 
+If `twine check` reports supported metadata versions only up to `2.2` while your wheel has a newer
+`Metadata-Version` (for example `2.4` from newer setuptools), upgrade your upload tooling first:
+
+```bash
+python -m pip install --upgrade twine pkginfo
+```
+
 ## Public API
 
 Public API is defined by `__init__.py` exports. Anything not exported there is considered
