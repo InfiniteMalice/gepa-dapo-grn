@@ -14,6 +14,48 @@ from pathlib import Path
 REQUIRED_FIELDS = ("Metadata-Version", "Name", "Version")
 
 
+def _normalized_distribution_name(name: str) -> str:
+    return "-".join(part for part in _name_split(name.lower()) if part)
+
+
+def _name_split(name: str) -> list[str]:
+    split_chars = "-_."
+    parts: list[str] = []
+    current = []
+    for char in name:
+        if char in split_chars:
+            if current:
+                parts.append("".join(current))
+                current = []
+            continue
+        current.append(char)
+    if current:
+        parts.append("".join(current))
+    return parts
+
+
+def _expected_identity_from_artifact_path(artifact_path: Path) -> tuple[str, str]:
+    if artifact_path.suffix == ".whl":
+        wheel_stem = artifact_path.name.removesuffix(".whl")
+        parts = wheel_stem.split("-")
+        if len(parts) < 5:
+            raise RuntimeError(f"{artifact_path}: invalid wheel filename")
+        return parts[0], parts[1]
+
+    if artifact_path.suffixes[-2:] == [".tar", ".gz"]:
+        archive_stem = artifact_path.name.removesuffix(".tar.gz")
+    elif artifact_path.suffix == ".zip":
+        archive_stem = artifact_path.name.removesuffix(".zip")
+    else:
+        raise RuntimeError(f"{artifact_path}: unsupported artifact type")
+
+    if "-" not in archive_stem:
+        raise RuntimeError(f"{artifact_path}: invalid source distribution filename")
+
+    expected_name, expected_version = archive_stem.rsplit("-", 1)
+    return expected_name, expected_version
+
+
 def _expected_wheel_metadata_member(artifact_path: Path) -> str:
     wheel_stem = artifact_path.name.removesuffix(".whl")
     parts = wheel_stem.split("-")
@@ -87,18 +129,35 @@ def _validate_artifact(artifact_path: Path) -> list[str]:
     if missing_fields:
         return [f"{artifact_path}: missing required metadata fields: {', '.join(missing_fields)}"]
 
+    expected_name, expected_version = _expected_identity_from_artifact_path(artifact_path)
+    errors: list[str] = []
+
+    actual_name = metadata["Name"]
+    if _normalized_distribution_name(expected_name) != _normalized_distribution_name(actual_name):
+        errors.append(
+            f"{artifact_path}: Name mismatch; expected {expected_name!r} from filename, "
+            f"found metadata Name {actual_name!r}."
+        )
+
+    actual_version = metadata["Version"]
+    if expected_version != actual_version:
+        errors.append(
+            f"{artifact_path}: Version mismatch; expected {expected_version!r} from filename, "
+            f"found metadata Version {actual_version!r}."
+        )
+
     metadata_version = metadata["Metadata-Version"]
     max_supported = _max_supported_pkginfo_metadata_version()
-    if max_supported is None:
-        return []
+    if max_supported is not None:
+        metadata_version_value = _metadata_version_tuple(metadata_version)
+        max_supported_value = _metadata_version_tuple(max_supported)
+        if metadata_version_value > max_supported_value:
+            errors.append(
+                f"{artifact_path}: Metadata-Version {metadata_version} exceeds locally supported "
+                f"pkginfo/twine maximum {max_supported}. Upgrade twine/pkginfo before upload."
+            )
 
-    if _metadata_version_tuple(metadata_version) > _metadata_version_tuple(max_supported):
-        return [
-            f"{artifact_path}: Metadata-Version {metadata_version} exceeds locally supported "
-            f"pkginfo/twine maximum {max_supported}. Upgrade twine/pkginfo before upload."
-        ]
-
-    return []
+    return errors
 
 
 def _metadata_version_tuple(metadata_version: str) -> tuple[int, ...]:

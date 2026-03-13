@@ -40,7 +40,7 @@ def test_validate_artifact_accepts_wheel_with_required_fields(tmp_path: Path) ->
     wheel = _write_wheel_with_metadata(
         tmp_path,
         "Metadata-Version: 2.1\nName: gepa-dapo-grn\nVersion: 0.2.1\n",
-        "pkg-0.0.0-py3-none-any.whl",
+        "gepa_dapo_grn-0.2.1-py3-none-any.whl",
     )
 
     assert module._validate_artifact(wheel) == []
@@ -123,6 +123,42 @@ def test_read_wheel_metadata_prefers_expected_dist_info_path(tmp_path: Path) -> 
     assert module._validate_artifact(wheel_path) == []
 
 
+def test_validate_artifact_reports_name_mismatch_from_wheel_filename(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_validator_module()
+    wheel = _write_wheel_with_metadata(
+        tmp_path,
+        "Metadata-Version: 2.1\nName: wrong-name\nVersion: 0.2.1\n",
+        "expected_name-0.2.1-py3-none-any.whl",
+    )
+    monkeypatch.setattr(module, "_max_supported_pkginfo_metadata_version", lambda: "9.9")
+
+    errors = module._validate_artifact(wheel)
+
+    assert errors
+    assert "Name mismatch" in errors[0]
+
+
+def test_validate_artifact_reports_version_mismatch_from_wheel_filename(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_validator_module()
+    wheel = _write_wheel_with_metadata(
+        tmp_path,
+        "Metadata-Version: 2.1\nName: pkg\nVersion: 9.9.9\n",
+        "pkg-0.2.1-py3-none-any.whl",
+    )
+    monkeypatch.setattr(module, "_max_supported_pkginfo_metadata_version", lambda: "9.9")
+
+    errors = module._validate_artifact(wheel)
+
+    assert errors
+    assert "Version mismatch" in errors[0]
+
+
 def test_validate_artifact_reports_pkginfo_twine_metadata_version_mismatch(
     monkeypatch,
     tmp_path: Path,
@@ -131,7 +167,7 @@ def test_validate_artifact_reports_pkginfo_twine_metadata_version_mismatch(
     wheel = _write_wheel_with_metadata(
         tmp_path,
         "Metadata-Version: 2.4\nName: gepa-dapo-grn\nVersion: 0.2.1\n",
-        "pkg-0.0.0-py3-none-any.whl",
+        "gepa_dapo_grn-0.2.1-py3-none-any.whl",
     )
     monkeypatch.setattr(module, "_max_supported_pkginfo_metadata_version", lambda: "2.2")
 
