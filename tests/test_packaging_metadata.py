@@ -69,3 +69,11 @@ def test_dependency_constraints_remain_release_safe() -> None:
         "black",
         'tomli>=1.1.0; python_version < "3.11"',
     ]
+
+
+def test_build_system_constraints_remain_twine_compatible() -> None:
+    data = _load_pyproject()
+    build_system = data["build-system"]
+
+    assert build_system["build-backend"] == "setuptools.build_meta"
+    assert build_system["requires"] == ["setuptools>=68,<77", "wheel"]

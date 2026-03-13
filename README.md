@@ -82,6 +82,7 @@ artifacts left in `dist/`. Use a clean build and upload only the current version
 ```bash
 rm -rf build dist *.egg-info
 python3 -m pip install --upgrade build twine tomli
+# Build isolation uses pyproject build-system pins (setuptools<77) for twine compatibility.
 python3 -m build
 PROJECT_VERSION=$(python - <<'PY2'
 from pathlib import Path
