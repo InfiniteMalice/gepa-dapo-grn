@@ -209,7 +209,7 @@ def _parse_args() -> argparse.Namespace:
             "before twine upload."
         )
     )
-    parser.add_argument("artifacts", nargs="+", help="Paths to .whl and .tar.gz files")
+    parser.add_argument("artifacts", nargs="+", help="Paths to .whl, .tar.gz, and .zip files")
     return parser.parse_args()
 
 
