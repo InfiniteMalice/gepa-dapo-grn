@@ -50,6 +50,14 @@ def test_versions_to_remove_includes_deprecated_default() -> None:
     assert module._versions_to_remove([]) == ["0.1.0"]
 
 
+def test_versions_to_remove_merges_dedupes_and_preserves_user_order() -> None:
+    module = _load_installer_module()
+
+    versions = module._versions_to_remove(["0.3.0", "0.1.0", "0.3.0", "0.2.0", "0.2.0"])
+
+    assert versions == ["0.1.0", "0.3.0", "0.2.0"]
+
+
 def test_main_happy_path_uses_project_name_prefix_and_invokes_pip(
     monkeypatch,
     tmp_path: Path,
@@ -133,6 +141,40 @@ def test_main_returns_subprocess_failure_code(monkeypatch, tmp_path: Path) -> No
     monkeypatch.setattr(module, "_load_find_single_wheel", lambda: _fake_find_single_wheel)
 
     assert module.main() == 9
+
+
+def test_main_with_real_loader_path(monkeypatch, tmp_path: Path) -> None:
+    module = _load_installer_module()
+    pyproject_path = module.SCRIPT_REPO_ROOT / "pyproject.toml"
+    project_version = module._load_project_version(pyproject_path)
+    project_name = module._load_project_name(pyproject_path)
+    package_prefix = module._wheel_prefix_for_project_name(project_name)
+    target_wheel = tmp_path / f"{package_prefix}-{project_version}-py3-none-any.whl"
+    target_wheel.write_text("wheel", encoding="utf-8")
+
+    monkeypatch.setattr(
+        module,
+        "_parse_args",
+        lambda: SimpleNamespace(
+            dist_dir=str(tmp_path),
+            prune_other_versions=False,
+            remove_version=[],
+            pip_arg=[],
+        ),
+    )
+
+    calls: list[list[str]] = []
+
+    def _fake_call(cmd: list[str]) -> int:
+        calls.append(cmd)
+        return 0
+
+    monkeypatch.setattr(module.subprocess, "call", _fake_call)
+
+    assert module.main() == 0
+    assert calls
+    assert calls[0][0:4] == [module.sys.executable, "-m", "pip", "install"]
+    assert calls[0][-1] == str(target_wheel)
 
 
 def test_main_reports_missing_wheel_and_returns_1(monkeypatch, tmp_path: Path, capsys) -> None:
