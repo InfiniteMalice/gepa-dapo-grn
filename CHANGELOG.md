@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0] - 2026-03-30
+
+- MaxRLTrainer: optional MaxRL-inspired verifier-first backend alongside the
+  existing DAPO trainer.
+- Introduced backend selection configuration (`TrainerBackendConfig`) and a
+  `make_trainer(...)` factory for choosing `backend="dapo"` or `backend="maxrl"` without code edits.
+- Included a verifier utility module and retained verifier-to-tag mapping support for GEPA
+  feedback.
+- Provided MaxRL logging and metrics for success count/rate, zero-success batches, sample count,
+  verifier coverage, per-task saturation, and objective/KL values.
+- Updated documentation and examples with backend guidance and a CPU-safe MaxRL verifier demo.
+- Preserved the no-explicit-deception-penalty policy: deception-like signals remain tags,
+  safety/controller inputs, and logging/analysis signals rather than scalar reward defaults.
+
 ## [0.2.1] - 2026-03-12
 
 - Audited packaging metadata and synchronized the project version across `pyproject.toml`,
