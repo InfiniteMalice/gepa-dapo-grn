@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
@@ -50,6 +50,25 @@ def summarize_feedback(feedbacks: Iterable[GEPAFeedback]) -> Dict[str, float]:
         metrics["coverage"] = metrics["feedback/verifier/verifier_coverage"]
 
     return metrics
+
+
+def feedback_records(feedbacks: Iterable[GEPAFeedback], backend: str) -> List[Dict[str, Any]]:
+    """Create JSONL-friendly records preserving full GEPA payloads."""
+
+    normalized_backend = backend.strip().lower()
+    records: List[Dict[str, Any]] = []
+    for feedback in feedbacks:
+        records.append(
+            {
+                "backend": normalized_backend,
+                "rewards": dict(feedback.rewards),
+                "tags": dict(feedback.tags),
+                "verifier": dict(feedback.verifier),
+                "abstained": bool(feedback.abstained),
+                "meta": dict(feedback.meta),
+            }
+        )
+    return records
 
 
 @dataclass
