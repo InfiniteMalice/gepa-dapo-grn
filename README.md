@@ -1,17 +1,46 @@
 # gepa-dapo-grn
 
 `gepa-dapo-grn` is a standalone reinforcement learning engine for research workflows. It is
-GEPA-shaped but GEPA-agnostic, providing DAPO optimization, curriculum tracking, safety
-controls, verifier-first hooks, and optional Global Response Normalization (GRN).
+GEPA-shaped but GEPA-agnostic, providing DAPO and MaxRL-style optimization, curriculum tracking,
+safety controls, verifier-first hooks, and optional Global Response Normalization (GRN).
 
 ## What this library is
 
 - **Standalone RL engine** with a stable public API under `gepa_dapo_grn.*`.
 - **GEPA-shaped but GEPA-agnostic**: feedback is structured reward/tag/verifier dictionaries.
-- **Supports DAPO + curriculum + safety + GRN** with conservative defaults and GRN disabled
-  unless explicitly enabled.
+- **Supports DAPO or MaxRL + curriculum + safety + GRN** with conservative defaults and GRN
+  disabled unless explicitly enabled.
 
-## Practical guidance (v0.2.1)
+## Backends
+
+- **DAPO**: general GEPA-shaped RL with mixed reward dimensions, curriculum, safety control,
+  and optional GRN.
+- **MaxRL**: verifier-heavy training for binary or near-binary correctness settings.
+
+MaxRL is typically best when tasks have robust validators (for example code generation, exact
+math checks, executable test suites, and other verifier-backed tasks). Non-binary
+ethics/alignment training generally still benefits from DAPO-style hybrid control.
+
+Minimal backend selection snippet:
+
+```python
+from gepa_dapo_grn import (
+    DAPOConfig,
+    MaxRLConfig,
+    TrainerBackendConfig,
+    make_trainer,
+)
+
+trainer = make_trainer(
+    policy=policy,
+    optimizer=optimizer,
+    backend_config=TrainerBackendConfig(backend="maxrl"),  # or "dapo"
+    dapo_config=DAPOConfig(),
+    maxrl_config=MaxRLConfig(enabled=True, num_samples=4),
+)
+```
+
+## Practical guidance (v0.3.0)
 
 - **Verifier-first**: use `VerifierResult` and `GEPAFeedback.verifier` for pass/fail, scores,
   confidence, coverage, and diagnostics.

@@ -108,6 +108,19 @@ class SafetyController:
         else:
             grn_config.enabled = risk_delta > self.grn_enable_threshold
 
+    def adjust_grn_config(self, grn_config: GRNConfig) -> None:
+        """Adjust only GRN settings for non-DAPO backends."""
+
+        if self._baseline_grn_enabled is None:
+            self._baseline_grn_enabled = grn_config.enabled
+        risk_score = self._risk_score()
+        risk_delta = max(0.0, risk_score - self.risk_tolerance)
+        self._last_risk_delta = risk_delta
+        if self._baseline_grn_enabled:
+            grn_config.enabled = True
+        else:
+            grn_config.enabled = risk_delta > self.grn_enable_threshold
+
     def describe(self) -> Dict[str, float]:
         """Return a summary of safety-related EMA statistics."""
 
