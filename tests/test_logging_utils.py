@@ -20,4 +20,6 @@ def test_feedback_records_preserves_full_feedback_payload() -> None:
     assert record["backend"] == "maxrl"
     assert record["rewards"]["r"] == 1.0
     assert record["tags"]["verifier_success"] == 1.0
+    assert record["verifier"]["verifier_coverage"] == 1.0
+    assert record["meta"]["task_id"] == "a"
     assert record["abstained"] is False

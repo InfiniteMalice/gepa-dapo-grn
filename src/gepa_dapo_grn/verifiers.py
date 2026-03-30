@@ -25,10 +25,12 @@ class VerifierResult:
         if self.passed is not None:
             tags["verifier_pass"] = float(self.passed)
             tags[success_key] = float(self.passed)
+            tags["verifier_success"] = tags[success_key]
         if self.score is not None:
             tags["verifier_score"] = float(self.score)
             if self.passed is None:
                 tags[success_key] = float(self.score)
+                tags["verifier_success"] = tags[success_key]
         if self.confidence is not None:
             tags["verifier_confidence"] = float(self.confidence)
         tags["verifier_coverage"] = float(self.coverage)

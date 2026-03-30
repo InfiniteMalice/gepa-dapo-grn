@@ -15,6 +15,8 @@ class TrainerBackendConfig:
     backend: str = "dapo"
 
     def validated_backend(self) -> str:
+        if not isinstance(self.backend, str):
+            raise ValueError("backend must be one of: 'dapo', 'maxrl'")
         backend = self.backend.strip().lower()
         if backend not in {"dapo", "maxrl"}:
             raise ValueError("backend must be one of: 'dapo', 'maxrl'")

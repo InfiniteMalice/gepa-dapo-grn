@@ -1,5 +1,6 @@
 import copy
 
+import pytest
 import torch
 from torch import nn
 
@@ -79,6 +80,13 @@ def test_backend_selection_factory() -> None:
         ),
         MaxRLTrainer,
     )
+    with pytest.raises(ValueError, match="backend='maxrl'"):
+        make_trainer(
+            policy,
+            optimizer,
+            backend_config=TrainerBackendConfig(backend="maxrl"),
+            reward_mixer=object(),  # type: ignore[arg-type]
+        )
 
 
 def test_verifier_result_maps_into_feedback_tags() -> None:
@@ -89,6 +97,11 @@ def test_verifier_result_maps_into_feedback_tags() -> None:
     assert feedback.tags["verifier_success"] == 1.0
     assert feedback.tags["verifier_coverage"] == 0.75
     assert feedback.tags["x"] == 0.3
+
+    custom_tags = VerifierResult(score=0.8).as_tags(success_key="custom_success")
+    custom_feedback = GEPAFeedback(tags=custom_tags)
+    assert custom_feedback.tags["custom_success"] == 0.8
+    assert custom_feedback.tags["verifier_success"] == 0.8
 
 
 def test_maxrl_has_no_special_deception_penalty_path() -> None:

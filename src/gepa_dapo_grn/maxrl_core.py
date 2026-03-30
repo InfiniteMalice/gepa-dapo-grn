@@ -111,10 +111,19 @@ class MaxRLTrainer:
             denom = float(success_count if self.config.normalize_by_successes else batch_size)
             mle_loss = -((success_weights * logp_new).sum() / max(1.0, denom))
         else:
-            mle_loss = torch.zeros((), dtype=logp_new.dtype, device=logp_new.device)
+            mle_loss = torch.zeros(
+                (),
+                dtype=logp_new.dtype,
+                device=logp_new.device,
+                requires_grad=True,
+            )
 
         kl_value = _approx_kl(logp_new, logp_ref)
-        zero_success_kl = self.config.zero_success_kl_coeff * kl_value if zero_success else 0.0
+        zero_success_kl = (
+            self.config.zero_success_kl_coeff * kl_value
+            if zero_success
+            else torch.zeros((), dtype=logp_new.dtype, device=logp_new.device)
+        )
         total_loss = mle_loss + zero_success_kl
 
         self.optimizer.zero_grad(set_to_none=True)

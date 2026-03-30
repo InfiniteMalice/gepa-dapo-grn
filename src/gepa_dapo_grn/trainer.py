@@ -37,6 +37,14 @@ def make_trainer(
 
     selector = (backend_config or TrainerBackendConfig()).validated_backend()
     if selector == "maxrl":
+        incompatible_inputs = []
+        if reward_mixer is not None:
+            incompatible_inputs.append("reward_mixer")
+        if dapo_config is not None:
+            incompatible_inputs.append("dapo_config")
+        if incompatible_inputs:
+            joined = ", ".join(incompatible_inputs)
+            raise ValueError(f"Invalid config for backend='maxrl': incompatible inputs: {joined}")
         resolved = maxrl_config or MaxRLConfig(enabled=True)
         return MaxRLTrainer(
             policy=policy,
@@ -46,6 +54,8 @@ def make_trainer(
             curriculum=curriculum,
             safety_controller=safety_controller,
         )
+    if maxrl_config is not None and maxrl_config.enabled:
+        raise ValueError("Invalid config for backend='dapo': maxrl_config.enabled must be False")
     return DAPOTrainer(
         policy=policy,
         optimizer=optimizer,
