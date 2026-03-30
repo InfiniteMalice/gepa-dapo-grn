@@ -124,6 +124,20 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, grad_clip_norm=-0.1)
     with pytest.raises(ValueError, match="success_tag_key must be a non-empty string"):
         MaxRLConfig(enabled=True, success_tag_key=" ")
+    with pytest.raises(ValueError, match="enabled must be a bool"):
+        MaxRLConfig(enabled="yes")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="enabled must be a bool"):
+        MaxRLConfig(enabled=None)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="success_tag_key must be a non-empty string"):
+        MaxRLConfig(enabled=True, success_tag_key=None)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="success_tag_key must be a non-empty string"):
+        MaxRLConfig(enabled=True, success_tag_key=123)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="max_success_weight must be numeric"):
+        MaxRLConfig(enabled=True, max_success_weight="high")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="zero_success_kl_coeff must be numeric"):
+        MaxRLConfig(enabled=True, zero_success_kl_coeff="low")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
+        MaxRLConfig(enabled=True, grad_clip_norm="1.0")  # type: ignore[arg-type]
 
 
 def test_maxrl_has_no_special_deception_penalty_path() -> None:
