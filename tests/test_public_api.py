@@ -13,10 +13,14 @@ from gepa_dapo_grn import (
     GEPAFeedback,
     GlobalResponseNorm,
     GRNConfig,
+    MaxRLConfig,
+    MaxRLTrainer,
     RewardMixerConfig,
     SafetyController,
     SimpleTextComposer,
+    TrainerBackendConfig,
     VerifierResult,
+    make_trainer,
 )
 from gepa_dapo_grn.dapo_core import DAPOBatch
 from gepa_dapo_grn.policy_interfaces import Policy, PolicyOutput
@@ -53,10 +57,13 @@ def test_public_api_exports() -> None:
     for cls in [
         DAPOTrainer,
         DAPOConfig,
+        MaxRLConfig,
+        TrainerBackendConfig,
         GRNConfig,
         RewardMixerConfig,
         GEPAFeedback,
         VerifierResult,
+        MaxRLTrainer,
         CurriculumTracker,
         SimpleTextComposer,
         SafetyController,
@@ -110,6 +117,16 @@ def test_public_api_schema_fields() -> None:
         "clip_max",
         "default_weight",
     }
+    assert {field.name for field in fields(MaxRLConfig)} == {
+        "enabled",
+        "num_samples",
+        "success_tag_key",
+        "use_binary_success_only",
+        "normalize_by_successes",
+        "min_success_count",
+        "max_success_weight",
+        "zero_success_kl_coeff",
+    }
 
 
 def test_train_step_signature_and_metrics() -> None:
@@ -130,3 +147,7 @@ def test_train_step_signature_and_metrics() -> None:
 
     assert "loss/total" in result.metrics
     assert "kl/value" in result.metrics
+
+
+def test_make_trainer_symbol_exposed() -> None:
+    assert callable(make_trainer)
