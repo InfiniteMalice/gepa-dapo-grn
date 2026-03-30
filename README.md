@@ -34,9 +34,16 @@ from gepa_dapo_grn import (
 trainer = make_trainer(
     policy=policy,
     optimizer=optimizer,
-    backend_config=TrainerBackendConfig(backend="maxrl"),  # or "dapo"
-    dapo_config=DAPOConfig(),
+    backend_config=TrainerBackendConfig(backend="maxrl"),
     maxrl_config=MaxRLConfig(enabled=True, num_samples=4),
+)
+
+# DAPO backend example:
+dapo_trainer = make_trainer(
+    policy=policy,
+    optimizer=optimizer,
+    backend_config=TrainerBackendConfig(backend="dapo"),
+    dapo_config=DAPOConfig(),
 )
 ```
 

@@ -124,15 +124,19 @@ class MaxRLConfig:
         if self.min_success_count < 0:
             raise ValueError("min_success_count must be >= 0")
 
-        if not isinstance(self.max_success_weight, Real):
+        if not isinstance(self.max_success_weight, Real) or isinstance(
+            self.max_success_weight, bool
+        ):
             raise ValueError("max_success_weight must be numeric")
         if self.max_success_weight < 0.0:
             raise ValueError("max_success_weight must be >= 0.0")
-        if not isinstance(self.zero_success_kl_coeff, Real):
+        if not isinstance(self.zero_success_kl_coeff, Real) or isinstance(
+            self.zero_success_kl_coeff, bool
+        ):
             raise ValueError("zero_success_kl_coeff must be numeric")
         if self.zero_success_kl_coeff < 0.0:
             raise ValueError("zero_success_kl_coeff must be >= 0.0")
-        if not isinstance(self.grad_clip_norm, Real):
+        if not isinstance(self.grad_clip_norm, Real) or isinstance(self.grad_clip_norm, bool):
             raise ValueError("grad_clip_norm must be numeric")
         if self.grad_clip_norm < 0.0:
             raise ValueError("grad_clip_norm must be >= 0.0")

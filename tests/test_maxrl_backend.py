@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch import nn
 
-from gepa_dapo_grn.config import MaxRLConfig, TrainerBackendConfig
+from gepa_dapo_grn.config import GRNConfig, MaxRLConfig, TrainerBackendConfig
 from gepa_dapo_grn.dapo_core import DAPOTrainer
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 from gepa_dapo_grn.maxrl_core import MaxRLBatch, MaxRLTrainer
@@ -60,6 +60,37 @@ def test_maxrl_smoke_success_and_zero_success() -> None:
     success_result = trainer.train_step(batch, success_feedbacks)
     assert torch.isfinite(success_result.loss)
     assert success_result.metrics["maxrl/success_count"] == 2.0
+
+    zero_feedbacks = [GEPAFeedback(tags={"verifier_success": 0.0}) for _ in range(4)]
+    zero_result = trainer.train_step(batch, zero_feedbacks)
+    assert torch.isfinite(zero_result.loss)
+    assert zero_result.metrics["maxrl/zero_success_batch_rate"] == 1.0
+
+
+def test_maxrl_smoke_with_grn_enabled() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(
+        policy=policy,
+        optimizer=optimizer,
+        config=MaxRLConfig(enabled=True, num_samples=2, min_success_count=1),
+        grn_config=GRNConfig(enabled=True),
+    )
+    actions = torch.zeros(4, dtype=torch.long)
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(actions.shape[0])},
+        actions=actions,
+        task_ids=["task-a", "task-a", "task-b", "task-b"],
+    )
+    mixed_feedbacks = [
+        GEPAFeedback(tags={"verifier_success": 1.0}),
+        GEPAFeedback(tags={"verifier_success": 0.0}),
+        GEPAFeedback(tags={"verifier_success": 1.0}),
+        GEPAFeedback(tags={"verifier_success": 0.0}),
+    ]
+    mixed_result = trainer.train_step(batch, mixed_feedbacks)
+    assert torch.isfinite(mixed_result.loss)
+    assert mixed_result.metrics["maxrl/success_count"] == 2.0
 
     zero_feedbacks = [GEPAFeedback(tags={"verifier_success": 0.0}) for _ in range(4)]
     zero_result = trainer.train_step(batch, zero_feedbacks)
@@ -138,6 +169,12 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, zero_success_kl_coeff="low")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
         MaxRLConfig(enabled=True, grad_clip_norm="1.0")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="max_success_weight must be numeric"):
+        MaxRLConfig(enabled=True, max_success_weight=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="zero_success_kl_coeff must be numeric"):
+        MaxRLConfig(enabled=True, zero_success_kl_coeff=False)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
+        MaxRLConfig(enabled=True, grad_clip_norm=True)  # type: ignore[arg-type]
 
 
 def test_maxrl_has_no_special_deception_penalty_path() -> None:

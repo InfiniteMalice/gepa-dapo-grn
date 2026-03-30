@@ -53,9 +53,9 @@ class MaxRLTrainer:
         self.grn_config = grn_config or GRNConfig()
         self.curriculum = curriculum or CurriculumTracker()
         self.safety_controller = safety_controller or SafetyController()
-        self.ref_policy = reference_policy or policy.clone()
         self._original_heads: Dict[str, nn.Module] = {}
         self._sync_grn_wrapping()
+        self.ref_policy = reference_policy or self.policy.clone()
 
     def update_reference(self) -> None:
         self.ref_policy = self.policy.clone()
