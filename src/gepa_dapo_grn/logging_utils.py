@@ -55,11 +55,12 @@ def summarize_feedback(feedbacks: Iterable[GEPAFeedback]) -> Dict[str, float]:
 def feedback_records(feedbacks: Iterable[GEPAFeedback], backend: str) -> List[Dict[str, Any]]:
     """Create JSONL-friendly records preserving full GEPA payloads."""
 
+    normalized_backend = backend.strip().lower()
     records: List[Dict[str, Any]] = []
     for feedback in feedbacks:
         records.append(
             {
-                "backend": backend,
+                "backend": normalized_backend,
                 "rewards": dict(feedback.rewards),
                 "tags": dict(feedback.tags),
                 "verifier": dict(feedback.verifier),

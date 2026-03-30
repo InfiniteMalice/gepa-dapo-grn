@@ -45,6 +45,8 @@ def make_trainer(
         if incompatible_inputs:
             joined = ", ".join(incompatible_inputs)
             raise ValueError(f"Invalid config for backend='maxrl': incompatible inputs: {joined}")
+        if maxrl_config is not None and not maxrl_config.enabled:
+            raise ValueError("backend='maxrl' requires maxrl_config.enabled=True")
         resolved = maxrl_config or MaxRLConfig(enabled=True)
         return MaxRLTrainer(
             policy=policy,

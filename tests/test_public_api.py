@@ -126,6 +126,7 @@ def test_public_api_schema_fields() -> None:
         "min_success_count",
         "max_success_weight",
         "zero_success_kl_coeff",
+        "grad_clip_norm",
     }
 
 

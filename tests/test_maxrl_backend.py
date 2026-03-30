@@ -87,6 +87,13 @@ def test_backend_selection_factory() -> None:
             backend_config=TrainerBackendConfig(backend="maxrl"),
             reward_mixer=object(),  # type: ignore[arg-type]
         )
+    with pytest.raises(ValueError, match="requires maxrl_config.enabled=True"):
+        make_trainer(
+            policy,
+            optimizer,
+            backend_config=TrainerBackendConfig(backend="maxrl"),
+            maxrl_config=MaxRLConfig(enabled=False),
+        )
 
 
 def test_verifier_result_maps_into_feedback_tags() -> None:
@@ -102,6 +109,21 @@ def test_verifier_result_maps_into_feedback_tags() -> None:
     custom_feedback = GEPAFeedback(tags=custom_tags)
     assert custom_feedback.tags["custom_success"] == 0.8
     assert custom_feedback.tags["verifier_success"] == 0.8
+
+
+def test_maxrl_config_validation_guards() -> None:
+    with pytest.raises(ValueError, match="num_samples must be >= 1"):
+        MaxRLConfig(enabled=True, num_samples=0)
+    with pytest.raises(ValueError, match="min_success_count must be >= 0"):
+        MaxRLConfig(enabled=True, min_success_count=-1)
+    with pytest.raises(ValueError, match="max_success_weight must be >= 0.0"):
+        MaxRLConfig(enabled=True, max_success_weight=-0.1)
+    with pytest.raises(ValueError, match="zero_success_kl_coeff must be >= 0.0"):
+        MaxRLConfig(enabled=True, zero_success_kl_coeff=-0.1)
+    with pytest.raises(ValueError, match="grad_clip_norm must be >= 0.0"):
+        MaxRLConfig(enabled=True, grad_clip_norm=-0.1)
+    with pytest.raises(ValueError, match="success_tag_key must be a non-empty string"):
+        MaxRLConfig(enabled=True, success_tag_key=" ")
 
 
 def test_maxrl_has_no_special_deception_penalty_path() -> None:
@@ -120,4 +142,4 @@ def test_maxrl_has_no_special_deception_penalty_path() -> None:
     ]
     result = trainer.train_step(batch, feedbacks)
     assert torch.isfinite(result.loss)
-    assert "deception" not in result.metrics
+    assert not any("deception" in key for key in result.metrics)

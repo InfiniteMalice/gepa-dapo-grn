@@ -21,7 +21,7 @@ class VerifierResult:
     def as_tags(self, success_key: str = "verifier_success") -> Dict[str, float]:
         """Flatten verifier outputs into numeric tags."""
 
-        tags = dict(self.diagnostics)
+        tags = {key: float(value) for key, value in self.diagnostics.items()}
         if self.passed is not None:
             tags["verifier_pass"] = float(self.passed)
             tags[success_key] = float(self.passed)

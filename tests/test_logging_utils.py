@@ -13,7 +13,7 @@ def test_feedback_records_preserves_full_feedback_payload() -> None:
                 abstained=False,
             )
         ],
-        backend="maxrl",
+        backend=" MaxRL ",
     )
     assert len(records) == 1
     record = records[0]
