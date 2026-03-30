@@ -9,6 +9,21 @@ from gepa_dapo_grn._compat import dataclass
 
 
 @dataclass(slots=True)
+class TrainerBackendConfig:
+    """Top-level trainer backend selection."""
+
+    backend: str = "dapo"
+
+    def validated_backend(self) -> str:
+        if not isinstance(self.backend, str):
+            raise ValueError("backend must be one of: 'dapo', 'maxrl'")
+        backend = self.backend.strip().lower()
+        if backend not in {"dapo", "maxrl"}:
+            raise ValueError("backend must be one of: 'dapo', 'maxrl'")
+        return backend
+
+
+@dataclass(slots=True)
 class DAPOConfig:
     """Configuration for DAPO-style policy optimization.
 
@@ -72,3 +87,17 @@ class RewardMixerConfig:
     clip_min: Optional[float] = None
     clip_max: Optional[float] = None
     default_weight: float = 0.0
+
+
+@dataclass(slots=True)
+class MaxRLConfig:
+    """Configuration for verifier-first MaxRL-inspired optimization."""
+
+    enabled: bool = False
+    num_samples: int = 4
+    success_tag_key: str = "verifier_success"
+    use_binary_success_only: bool = True
+    normalize_by_successes: bool = True
+    min_success_count: int = 1
+    max_success_weight: float = 10.0
+    zero_success_kl_coeff: float = 0.05
