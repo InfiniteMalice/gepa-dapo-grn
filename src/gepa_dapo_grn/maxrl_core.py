@@ -50,6 +50,8 @@ class MaxRLTrainer:
         self.policy = policy
         self.optimizer = optimizer
         self.config = config or MaxRLConfig(enabled=True)
+        if not self.config.enabled:
+            raise ValueError("MaxRL backend requires MaxRLConfig.enabled=True")
         self.grn_config = grn_config or GRNConfig()
         self.curriculum = curriculum or CurriculumTracker()
         self.safety_controller = safety_controller or SafetyController()

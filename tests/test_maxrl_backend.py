@@ -125,6 +125,8 @@ def test_backend_selection_factory() -> None:
             backend_config=TrainerBackendConfig(backend="maxrl"),
             maxrl_config=MaxRLConfig(enabled=False),
         )
+    with pytest.raises(ValueError, match="MaxRL backend requires MaxRLConfig.enabled=True"):
+        MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=False))
 
 
 def test_verifier_result_maps_into_feedback_tags() -> None:
