@@ -21,16 +21,19 @@ class VerifierResult:
     def as_tags(self, success_key: str = "verifier_success") -> Dict[str, float]:
         """Flatten verifier outputs into numeric tags."""
 
+        final_key = success_key.strip()
+        if not final_key:
+            final_key = "verifier_success"
         tags = {key: float(value) for key, value in self.diagnostics.items()}
         if self.passed is not None:
             tags["verifier_pass"] = float(self.passed)
-            tags[success_key] = float(self.passed)
-            tags["verifier_success"] = tags[success_key]
+            tags[final_key] = float(self.passed)
+            tags["verifier_success"] = tags[final_key]
         if self.score is not None:
             tags["verifier_score"] = float(self.score)
             if self.passed is None:
-                tags[success_key] = float(self.score)
-                tags["verifier_success"] = tags[success_key]
+                tags[final_key] = float(self.score)
+                tags["verifier_success"] = tags[final_key]
         if self.confidence is not None:
             tags["verifier_confidence"] = float(self.confidence)
         tags["verifier_coverage"] = float(self.coverage)

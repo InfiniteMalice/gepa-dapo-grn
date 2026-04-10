@@ -112,8 +112,8 @@ class MaxRLTrainer:
             device=logp_new.device,
         )
         success_count = int((success_weights > 0).sum().item())
-        batch_size = max(1, int(success_weights.numel()))
-        success_rate = float(success_count / batch_size)
+        effective_batch_size = max(1, int(success_weights.numel()))
+        success_rate = float(success_count / effective_batch_size)
         zero_success = float(success_count == 0)
         insufficient_success = float(0 < success_count < self.config.min_success_count)
 
@@ -121,7 +121,9 @@ class MaxRLTrainer:
         kl_fallback = self.config.zero_success_kl_coeff * kl_value
 
         if success_count >= self.config.min_success_count:
-            denom = float(success_count if self.config.normalize_by_successes else batch_size)
+            denom = float(
+                success_count if self.config.normalize_by_successes else effective_batch_size
+            )
             mle_loss = -((success_weights * logp_new).sum() / max(1.0, denom))
         elif success_count > 0:
             mle_loss = kl_fallback

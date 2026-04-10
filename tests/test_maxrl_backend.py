@@ -141,6 +141,10 @@ def test_verifier_result_maps_into_feedback_tags() -> None:
     assert custom_feedback.tags["custom_success"] == 0.8
     assert custom_feedback.tags["verifier_success"] == 0.8
 
+    blank_key_tags = VerifierResult(score=0.6).as_tags(success_key="   ")
+    assert "verifier_success" in blank_key_tags
+    assert blank_key_tags["verifier_success"] == 0.6
+
 
 def test_maxrl_config_validation_guards() -> None:
     with pytest.raises(ValueError, match="num_samples must be >= 1"):
