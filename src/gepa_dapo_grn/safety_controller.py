@@ -92,21 +92,28 @@ class SafetyController:
             self._baseline_clip_ratio = dapo_config.clip_ratio
         if self._baseline_kl_coeff is None:
             self._baseline_kl_coeff = dapo_config.kl_coeff
-        if self._baseline_grn_enabled is None:
-            self._baseline_grn_enabled = grn_config.enabled
-
-        risk_score = self._risk_score()
-        risk_delta = max(0.0, risk_score - self.risk_tolerance)
-        self._last_risk_delta = risk_delta
+        self._apply_grn_adjustment(grn_config)
+        risk_delta = self._last_risk_delta
         adjustment = 1.0 + self.adjustment_scale * risk_delta
 
         dapo_config.clip_ratio = max(self.min_clip_ratio, self._baseline_clip_ratio / adjustment)
         dapo_config.kl_coeff = min(self.max_kl_coeff, self._baseline_kl_coeff * adjustment)
 
+    def _apply_grn_adjustment(self, grn_config: GRNConfig) -> None:
+        if self._baseline_grn_enabled is None:
+            self._baseline_grn_enabled = grn_config.enabled
+        risk_score = self._risk_score()
+        risk_delta = max(0.0, risk_score - self.risk_tolerance)
+        self._last_risk_delta = risk_delta
         if self._baseline_grn_enabled:
             grn_config.enabled = True
         else:
             grn_config.enabled = risk_delta > self.grn_enable_threshold
+
+    def adjust_grn_config(self, grn_config: GRNConfig) -> None:
+        """Adjust only GRN settings for non-DAPO backends."""
+
+        self._apply_grn_adjustment(grn_config)
 
     def describe(self) -> Dict[str, float]:
         """Return a summary of safety-related EMA statistics."""
