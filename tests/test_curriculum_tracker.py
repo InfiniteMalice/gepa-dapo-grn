@@ -62,6 +62,13 @@ def test_curriculum_prefers_tag_verifier_pass_over_legacy_verifier_field() -> No
     assert stats.verifier_pass_rate_ema == 0.5
 
 
+def test_curriculum_accepts_legacy_verifier_success_field() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
 def test_simple_text_composer() -> None:
     composer = SimpleTextComposer(separator=" | ")
     output = composer.compose(["a", "b"], depth=2)
