@@ -102,6 +102,8 @@ class MaxRLTrainer:
             self._ref_grn_enabled = self.grn_config.enabled
 
         self.policy.train()
+        if "batch_size" in batch.inputs:
+            batch.inputs["batch_size"] = batch_size
         logp_new = self.policy.logprobs(batch.actions, **batch.inputs)
         with torch.no_grad():
             logp_ref = self.ref_policy.logprobs(batch.actions, **batch.inputs)
