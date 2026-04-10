@@ -55,6 +55,34 @@ def test_curriculum_tracker_saturation_increases_composition_depth() -> None:
     assert stats.composition_depth >= 1
 
 
+def test_curriculum_prefers_tag_verifier_pass_over_legacy_verifier_field() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(tags={"verifier_pass": 1.0}, verifier={"verifier_pass": 0.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_accepts_legacy_verifier_success_field() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_accepts_verifier_success_in_tags() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(tags={"verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_verifier_precedence_verifier_pass_over_legacy() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_pass": 0.0, "verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.0
+
+
 def test_simple_text_composer() -> None:
     composer = SimpleTextComposer(separator=" | ")
     output = composer.compose(["a", "b"], depth=2)
