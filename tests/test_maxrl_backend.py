@@ -108,6 +108,7 @@ def test_backend_selection_factory() -> None:
             optimizer,
             backend_config=TrainerBackendConfig(backend="maxrl"),
             maxrl_config=MaxRLConfig(enabled=True),
+            reference_policy=SimplePolicy(),
         ),
         MaxRLTrainer,
     )
@@ -127,6 +128,22 @@ def test_backend_selection_factory() -> None:
         )
     with pytest.raises(ValueError, match="MaxRL backend requires MaxRLConfig.enabled=True"):
         MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=False))
+
+
+def test_maxrl_reference_policy_is_cloned_frozen_and_eval() -> None:
+    policy = SimplePolicy()
+    reference = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(
+        policy=policy,
+        optimizer=optimizer,
+        config=MaxRLConfig(enabled=True),
+        reference_policy=reference,
+    )
+
+    assert trainer.ref_policy is not reference
+    assert trainer.ref_policy.training is False
+    assert all(not param.requires_grad for param in trainer.ref_policy.parameters())
 
 
 def test_verifier_result_maps_into_feedback_tags() -> None:

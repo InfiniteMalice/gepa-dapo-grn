@@ -57,13 +57,20 @@ class MaxRLTrainer:
         self.safety_controller = safety_controller or SafetyController()
         self._original_heads: Dict[str, nn.Module] = {}
         self._sync_grn_wrapping()
-        # Intentional order: clone after potential GRN wrapping so KL compares against the
-        # post-wrapped structure used for MaxRL updates.
-        self.ref_policy = reference_policy or self.policy.clone()
-        self._ref_grn_enabled = self.grn_config.enabled
+        self._refresh_reference(reference_policy)
 
     def update_reference(self) -> None:
-        self.ref_policy = self.policy.clone()
+        self._refresh_reference()
+
+    def _refresh_reference(self, source_policy: Optional[Policy] = None) -> None:
+        # Intentional order: clone after potential GRN wrapping so KL compares against the
+        # post-wrapped structure used for MaxRL updates.
+        source = source_policy or self.policy
+        self.ref_policy = source.clone()
+        self.ref_policy.eval()
+        for parameter in self.ref_policy.parameters():
+            parameter.requires_grad_(False)
+        self._ref_grn_enabled = self.grn_config.enabled
 
     def _sync_grn_wrapping(self) -> None:
         if self.grn_config.enabled and not self._original_heads:
@@ -100,8 +107,7 @@ class MaxRLTrainer:
         self.safety_controller.adjust_grn_config(self.grn_config)
         self._sync_grn_wrapping()
         if self._ref_grn_enabled != self.grn_config.enabled:
-            self.ref_policy = self.policy.clone()
-            self._ref_grn_enabled = self.grn_config.enabled
+            self._refresh_reference()
 
         inputs = dict(batch.inputs)
         if "batch_size" in inputs:
@@ -120,6 +126,7 @@ class MaxRLTrainer:
             dtype=logp_new.dtype,
             device=logp_new.device,
         )
+        success_weights = torch.clamp(success_weights, max=float(self.config.max_success_weight))
         success_count = int((success_weights > 0).sum().item())
         effective_batch_size = max(1, int(success_weights.numel()))
         success_rate = float(success_count / effective_batch_size)

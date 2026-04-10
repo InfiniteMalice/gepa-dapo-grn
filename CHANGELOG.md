@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.0] - 2026-03-30
+## [Unreleased]
 
 - MaxRLTrainer: optional MaxRL-inspired verifier-first backend alongside the
   existing DAPO trainer.

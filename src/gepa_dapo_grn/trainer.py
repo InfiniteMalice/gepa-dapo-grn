@@ -32,6 +32,7 @@ def make_trainer(
     reward_mixer: Optional[RewardMixerConfig] = None,
     curriculum: Optional[CurriculumTracker] = None,
     safety_controller: Optional[SafetyController] = None,
+    reference_policy: Optional[Policy] = None,
 ) -> TrainerType:
     """Instantiate a trainer from a backend selector config."""
 
@@ -55,6 +56,7 @@ def make_trainer(
             grn_config=grn_config,
             curriculum=curriculum,
             safety_controller=safety_controller,
+            reference_policy=reference_policy,
         )
     if maxrl_config is not None and maxrl_config.enabled:
         raise ValueError("Invalid config for backend='dapo': maxrl_config.enabled must be False")

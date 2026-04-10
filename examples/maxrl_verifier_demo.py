@@ -67,7 +67,10 @@ def main() -> None:
     trainer = MaxRLTrainer(policy, optimizer, config=MaxRLConfig(enabled=True, num_samples=4))
 
     for step in range(4):
-        sampled_actions = torch.randint(low=0, high=2, size=(len(items),), dtype=torch.long)
+        with torch.no_grad():
+            outputs = policy(batch_size=torch.tensor(len(items)))
+            probs = torch.softmax(outputs.logits, dim=-1)
+            sampled_actions = torch.distributions.Categorical(probs=probs).sample()
         feedbacks: List[GEPAFeedback] = []
         task_ids: List[str] = []
         for item, action in zip(items, sampled_actions.tolist()):
