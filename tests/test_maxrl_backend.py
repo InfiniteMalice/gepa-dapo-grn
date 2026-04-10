@@ -151,8 +151,10 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, max_success_weight=-0.1)
     with pytest.raises(ValueError, match="zero_success_kl_coeff must be >= 0.0"):
         MaxRLConfig(enabled=True, zero_success_kl_coeff=-0.1)
-    with pytest.raises(ValueError, match="grad_clip_norm must be >= 0.0"):
+    with pytest.raises(ValueError, match="grad_clip_norm must be > 0.0"):
         MaxRLConfig(enabled=True, grad_clip_norm=-0.1)
+    with pytest.raises(ValueError, match="grad_clip_norm must be > 0.0"):
+        MaxRLConfig(enabled=True, grad_clip_norm=0.0)
     with pytest.raises(ValueError, match="success_tag_key must be a non-empty string"):
         MaxRLConfig(enabled=True, success_tag_key=" ")
     with pytest.raises(ValueError, match="enabled must be a bool"):

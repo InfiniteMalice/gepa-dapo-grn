@@ -138,5 +138,5 @@ class MaxRLConfig:
             raise ValueError("zero_success_kl_coeff must be >= 0.0")
         if not isinstance(self.grad_clip_norm, Real) or isinstance(self.grad_clip_norm, bool):
             raise ValueError("grad_clip_norm must be numeric")
-        if self.grad_clip_norm < 0.0:
-            raise ValueError("grad_clip_norm must be >= 0.0")
+        if self.grad_clip_norm <= 0.0:
+            raise ValueError("grad_clip_norm must be > 0.0")
