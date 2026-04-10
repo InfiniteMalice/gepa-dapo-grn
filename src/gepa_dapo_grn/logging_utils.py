@@ -56,6 +56,8 @@ def feedback_records(feedbacks: Iterable[GEPAFeedback], backend: str) -> List[Di
     """Create JSONL-friendly records preserving full GEPA payloads."""
 
     normalized_backend = backend.strip().lower()
+    if not normalized_backend:
+        raise ValueError("backend label must not be empty")
     records: List[Dict[str, Any]] = []
     for feedback in feedbacks:
         records.append(

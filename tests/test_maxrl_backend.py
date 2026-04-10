@@ -177,6 +177,9 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, zero_success_kl_coeff=False)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
         MaxRLConfig(enabled=True, grad_clip_norm=True)  # type: ignore[arg-type]
+    assert MaxRLConfig(enabled=True, success_tag_key=" verifier_success ").success_tag_key == (
+        "verifier_success"
+    )
 
 
 def test_maxrl_has_no_special_deception_penalty_path() -> None:
@@ -196,3 +199,16 @@ def test_maxrl_has_no_special_deception_penalty_path() -> None:
     result = trainer.train_step(batch, feedbacks)
     assert torch.isfinite(result.loss)
     assert not any("deception" in key for key in result.metrics)
+
+
+def test_maxrl_rejects_empty_batch() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=True))
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(0)},
+        actions=torch.zeros(0, dtype=torch.long),
+        task_ids=[],
+    )
+    with pytest.raises(ValueError, match="batch is empty; cannot compute loss"):
+        trainer.train_step(batch, [])

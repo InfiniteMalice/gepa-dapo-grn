@@ -1,3 +1,5 @@
+import pytest
+
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 from gepa_dapo_grn.logging_utils import feedback_records
 
@@ -41,3 +43,8 @@ def test_feedback_records_multiple_and_abstained_preserved() -> None:
     assert records[0]["abstained"] is False
     assert records[1]["backend"] == "dapo"
     assert records[1]["abstained"] is True
+
+
+def test_feedback_records_rejects_empty_backend_label() -> None:
+    with pytest.raises(ValueError, match="backend label must not be empty"):
+        feedback_records([GEPAFeedback()], backend="   ")

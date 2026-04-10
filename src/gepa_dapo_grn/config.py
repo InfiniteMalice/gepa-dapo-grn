@@ -113,6 +113,7 @@ class MaxRLConfig:
             raise ValueError("normalize_by_successes must be a bool")
         if not isinstance(self.success_tag_key, str) or not self.success_tag_key.strip():
             raise ValueError("success_tag_key must be a non-empty string")
+        self.success_tag_key = self.success_tag_key.strip()
 
         if not isinstance(self.num_samples, int) or isinstance(self.num_samples, bool):
             raise ValueError("num_samples must be an integer")

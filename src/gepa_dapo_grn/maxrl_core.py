@@ -58,6 +58,7 @@ class MaxRLTrainer:
         # Intentional order: clone after potential GRN wrapping so KL compares against the
         # post-wrapped structure used for MaxRL updates.
         self.ref_policy = reference_policy or self.policy.clone()
+        self._ref_grn_enabled = self.grn_config.enabled
 
     def update_reference(self) -> None:
         self.ref_policy = self.policy.clone()
@@ -83,9 +84,12 @@ class MaxRLTrainer:
         return min(self.config.max_success_weight, max(0.0, value))
 
     def train_step(self, batch: MaxRLBatch, feedbacks: List[GEPAFeedback]) -> MaxRLStepResult:
-        if len(feedbacks) != batch.actions.shape[0]:
+        batch_size = int(batch.actions.shape[0])
+        if batch_size == 0 or len(feedbacks) == 0 or len(batch.task_ids) == 0:
+            raise ValueError("batch is empty; cannot compute loss")
+        if len(feedbacks) != batch_size:
             raise ValueError("feedbacks and task_ids must align with batch size")
-        if len(batch.task_ids) != batch.actions.shape[0]:
+        if len(batch.task_ids) != batch_size:
             raise ValueError("feedbacks and task_ids must align with batch size")
 
         for task_id, feedback in zip(batch.task_ids, feedbacks):
@@ -93,6 +97,9 @@ class MaxRLTrainer:
             self.safety_controller.update(feedback)
         self.safety_controller.adjust_grn_config(self.grn_config)
         self._sync_grn_wrapping()
+        if self._ref_grn_enabled != self.grn_config.enabled:
+            self.ref_policy = self.policy.clone()
+            self._ref_grn_enabled = self.grn_config.enabled
 
         self.policy.train()
         logp_new = self.policy.logprobs(batch.actions, **batch.inputs)
