@@ -101,10 +101,17 @@ class MaxRLTrainer:
             self.ref_policy = self.policy.clone()
             self._ref_grn_enabled = self.grn_config.enabled
 
+        inputs = dict(batch.inputs)
+        if "batch_size" in inputs:
+            if int(inputs["batch_size"]) != batch_size:
+                raise ValueError("batch.inputs['batch_size'] must match batch.actions.shape[0]")
+        else:
+            inputs["batch_size"] = torch.tensor(batch_size, device=batch.actions.device)
+
         self.policy.train()
-        logp_new = self.policy.logprobs(batch.actions, **batch.inputs)
+        logp_new = self.policy.logprobs(batch.actions, **inputs)
         with torch.no_grad():
-            logp_ref = self.ref_policy.logprobs(batch.actions, **batch.inputs)
+            logp_ref = self.ref_policy.logprobs(batch.actions, **inputs)
 
         success_weights = torch.tensor(
             [self._success_value(fb) for fb in feedbacks],
