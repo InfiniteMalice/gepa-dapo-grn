@@ -55,6 +55,8 @@ class MaxRLTrainer:
         self.safety_controller = safety_controller or SafetyController()
         self._original_heads: Dict[str, nn.Module] = {}
         self._sync_grn_wrapping()
+        # Intentional order: clone after potential GRN wrapping so KL compares against the
+        # post-wrapped structure used for MaxRL updates.
         self.ref_policy = reference_policy or self.policy.clone()
 
     def update_reference(self) -> None:
