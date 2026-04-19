@@ -112,7 +112,10 @@ class MaxRLTrainer:
 
         inputs = dict(batch.inputs)
         if "batch_size" in inputs:
-            if int(inputs["batch_size"]) != batch_size:
+            input_batch_size = inputs["batch_size"]
+            if isinstance(input_batch_size, torch.Tensor):
+                input_batch_size = input_batch_size.item()
+            if int(input_batch_size) != batch_size:
                 raise ValueError("batch.inputs['batch_size'] must match batch.actions.shape[0]")
         else:
             inputs["batch_size"] = torch.tensor(batch_size, device=batch.actions.device)

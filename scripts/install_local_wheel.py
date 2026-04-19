@@ -69,8 +69,20 @@ def _load_project_version(
                             if isinstance(attr_path, str) and attr_path.strip():
                                 module_path, sep, attr_name = attr_path.rpartition(".")
                                 if sep and module_path and attr_name:
-                                    module = __import__(module_path, fromlist=[attr_name])
-                                    attr_value = getattr(module, attr_name, None)
+                                    try:
+                                        module = __import__(module_path, fromlist=[attr_name])
+                                        attr_value = getattr(module, attr_name)
+                                    except (
+                                        ImportError,
+                                        ModuleNotFoundError,
+                                        AttributeError,
+                                    ) as exc:
+                                        raise RuntimeError(
+                                            "Failed to resolve dynamic project version from "
+                                            f"attr_path={attr_path!r} "
+                                            f"(module_path={module_path!r}, "
+                                            f"attr_name={attr_name!r}): {exc}"
+                                        ) from exc
                                     if isinstance(attr_value, str) and attr_value.strip():
                                         return attr_value
 
