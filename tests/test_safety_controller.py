@@ -37,3 +37,22 @@ def test_safety_controller_uses_configurable_verifier_signals() -> None:
     assert dapo_config.clip_ratio < 0.2
     assert dapo_config.kl_coeff > 0.1
     assert controller.sampling_multiplier() < 1.0
+
+
+def test_adjust_grn_config_maxrl_path_threshold_and_baseline_behavior() -> None:
+    controller = SafetyController(risk_tolerance=0.2, grn_enable_threshold=0.3)
+    grn_config = GRNConfig(enabled=False)
+
+    controller._risk_score = lambda: 0.4  # type: ignore[method-assign]
+    controller.adjust_grn_config(grn_config)
+    assert grn_config.enabled is False
+
+    controller._risk_score = lambda: 0.9  # type: ignore[method-assign]
+    controller.adjust_grn_config(grn_config)
+    assert grn_config.enabled is True
+
+    sticky_controller = SafetyController(risk_tolerance=0.2, grn_enable_threshold=0.9)
+    sticky_grn = GRNConfig(enabled=True)
+    sticky_controller._risk_score = lambda: 0.2  # type: ignore[method-assign]
+    sticky_controller.adjust_grn_config(sticky_grn)
+    assert sticky_grn.enabled is True
