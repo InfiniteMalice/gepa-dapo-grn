@@ -230,11 +230,11 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, zero_success_kl_coeff=False)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
         MaxRLConfig(enabled=True, grad_clip_norm=True)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="max_success_weight must be numeric"):
+    with pytest.raises(ValueError, match="max_success_weight must be finite"):
         MaxRLConfig(enabled=True, max_success_weight=float("nan"))
-    with pytest.raises(ValueError, match="zero_success_kl_coeff must be numeric"):
+    with pytest.raises(ValueError, match="zero_success_kl_coeff must be finite"):
         MaxRLConfig(enabled=True, zero_success_kl_coeff=float("inf"))
-    with pytest.raises(ValueError, match="grad_clip_norm must be numeric"):
+    with pytest.raises(ValueError, match="grad_clip_norm must be finite"):
         MaxRLConfig(enabled=True, grad_clip_norm=float("inf"))
     assert MaxRLConfig(enabled=True, success_tag_key=" verifier_success ").success_tag_key == (
         "verifier_success"

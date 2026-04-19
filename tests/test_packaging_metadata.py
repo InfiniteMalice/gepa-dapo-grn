@@ -49,7 +49,12 @@ def _load_runtime_version() -> str:
 
 def test_project_version_matches_runtime_version() -> None:
     data = _load_pyproject()
-    assert data["project"]["version"] == _load_runtime_version()
+    project = data["project"]
+    assert project["dynamic"] == ["version"]
+    assert data["tool"]["setuptools"]["dynamic"]["version"]["attr"] == (
+        "gepa_dapo_grn._version.__version__"
+    )
+    assert _load_runtime_version()
 
 
 def test_dependency_constraints_remain_release_safe() -> None:

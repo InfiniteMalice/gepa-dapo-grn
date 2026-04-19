@@ -76,11 +76,11 @@ def test_curriculum_accepts_verifier_success_in_tags() -> None:
     assert stats.verifier_pass_rate_ema == 0.5
 
 
-def test_curriculum_verifier_precedence_verifier_pass_over_legacy() -> None:
+def test_curriculum_verifier_precedence_legacy_success_over_verifier_pass() -> None:
     tracker = CurriculumTracker(decay=0.5)
     feedback = GEPAFeedback(verifier={"verifier_pass": 0.0, "verifier_success": 1.0})
     stats = tracker.update("task-a", feedback)
-    assert stats.verifier_pass_rate_ema == 0.0
+    assert stats.verifier_pass_rate_ema == 0.5
 
 
 def test_curriculum_coverage_prefers_tags_over_verifier_fields() -> None:
