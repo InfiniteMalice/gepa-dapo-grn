@@ -55,6 +55,36 @@ def _load_project_version(
         project_version = project_table.get("version")
         if isinstance(project_version, str) and project_version.strip():
             return project_version
+        dynamic_fields = project_table.get("dynamic")
+        if isinstance(dynamic_fields, list) and "version" in dynamic_fields:
+            tool_table = data.get("tool")
+            if isinstance(tool_table, dict):
+                setuptools_table = tool_table.get("setuptools")
+                if isinstance(setuptools_table, dict):
+                    dynamic_table = setuptools_table.get("dynamic")
+                    if isinstance(dynamic_table, dict):
+                        version_table = dynamic_table.get("version")
+                        if isinstance(version_table, dict):
+                            attr_path = version_table.get("attr")
+                            if isinstance(attr_path, str) and attr_path.strip():
+                                module_path, sep, attr_name = attr_path.rpartition(".")
+                                if sep and module_path and attr_name:
+                                    try:
+                                        module = __import__(module_path, fromlist=[attr_name])
+                                        attr_value = getattr(module, attr_name)
+                                    except (
+                                        ImportError,
+                                        ModuleNotFoundError,
+                                        AttributeError,
+                                    ) as exc:
+                                        raise RuntimeError(
+                                            "Failed to resolve dynamic project version from "
+                                            f"attr_path={attr_path!r} "
+                                            f"(module_path={module_path!r}, "
+                                            f"attr_name={attr_name!r}): {exc}"
+                                        ) from exc
+                                    if isinstance(attr_value, str) and attr_value.strip():
+                                        return attr_value
 
     tool_table = data.get("tool")
     if isinstance(tool_table, dict):
@@ -66,7 +96,7 @@ def _load_project_version(
 
     raise RuntimeError(
         "Failed to parse "
-        f"{pyproject_path}: pyproject.toml missing or invalid 'project.version' value."
+        f"{pyproject_path}: pyproject.toml missing or invalid project version metadata."
     )
 
 
