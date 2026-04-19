@@ -34,25 +34,38 @@ class VerifierResult:
             if math.isfinite(numeric):
                 tags[key] = numeric
         if self.passed is not None:
-            passed_value = float(self.passed)
-            if math.isfinite(passed_value):
+            try:
+                passed_value = float(self.passed)
+            except (TypeError, ValueError):
+                passed_value = None
+            if passed_value is not None and math.isfinite(passed_value):
                 tags["verifier_pass"] = passed_value
                 tags[final_key] = passed_value
                 tags["verifier_success"] = tags[final_key]
         if self.score is not None:
-            score_value = float(self.score)
-            if math.isfinite(score_value):
+            try:
+                score_value = float(self.score)
+            except (TypeError, ValueError):
+                score_value = None
+            if score_value is not None and math.isfinite(score_value):
                 tags["verifier_score"] = score_value
                 if self.passed is None:
                     tags[final_key] = score_value
                     tags["verifier_success"] = tags[final_key]
         if self.confidence is not None:
-            confidence_value = float(self.confidence)
-            if math.isfinite(confidence_value):
+            try:
+                confidence_value = float(self.confidence)
+            except (TypeError, ValueError):
+                confidence_value = None
+            if confidence_value is not None and math.isfinite(confidence_value):
                 tags["verifier_confidence"] = confidence_value
-        coverage_value = float(self.coverage)
-        if math.isfinite(coverage_value):
-            tags["verifier_coverage"] = coverage_value
+        if self.coverage is not None:
+            try:
+                coverage_value = float(self.coverage)
+            except (TypeError, ValueError):
+                coverage_value = None
+            if coverage_value is not None and math.isfinite(coverage_value):
+                tags["verifier_coverage"] = coverage_value
         return tags
 
 

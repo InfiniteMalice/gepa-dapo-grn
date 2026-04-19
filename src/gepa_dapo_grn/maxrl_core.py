@@ -55,9 +55,10 @@ class MaxRLTrainer:
         self.grn_config = grn_config or GRNConfig()
         self.curriculum = curriculum or CurriculumTracker()
         self.safety_controller = safety_controller or SafetyController()
+        self._initial_reference_policy = reference_policy
         self._original_heads: Dict[str, nn.Module] = {}
         self._sync_grn_wrapping()
-        self._refresh_reference(reference_policy)
+        self._refresh_reference()
 
     def update_reference(self) -> None:
         self._refresh_reference()
@@ -65,7 +66,11 @@ class MaxRLTrainer:
     def _refresh_reference(self, source_policy: Optional[Policy] = None) -> None:
         # Intentional order: clone after potential GRN wrapping so KL compares against the
         # post-wrapped structure used for MaxRL updates.
-        source = (source_policy or self.policy).clone()
+        # When an explicit constructor reference is provided, retain it as the source for
+        # future refreshes triggered by update_reference() and GRN state transitions.
+        if source_policy is None:
+            source_policy = self._initial_reference_policy or self.policy
+        source = source_policy.clone()
         if self.grn_config.enabled:
             maybe_wrap_policy_heads(source, self.grn_config)
         self.ref_policy = source

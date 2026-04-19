@@ -153,6 +153,27 @@ def test_maxrl_reference_policy_is_cloned_frozen_and_eval() -> None:
     assert all(not param.requires_grad for param in trainer.ref_policy.parameters())
 
 
+def test_maxrl_preserves_constructor_reference_for_future_refreshes() -> None:
+    policy = SimplePolicy()
+    reference = SimplePolicy()
+    with torch.no_grad():
+        policy.logits_param.fill_(2.0)
+        reference.logits_param.fill_(-3.0)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(
+        policy=policy,
+        optimizer=optimizer,
+        config=MaxRLConfig(enabled=True),
+        reference_policy=reference,
+    )
+
+    with torch.no_grad():
+        trainer.policy.logits_param.fill_(9.0)
+    trainer.update_reference()
+    expected = torch.full_like(reference.logits_param, -3.0)
+    assert torch.allclose(trainer.ref_policy.logits_param, expected)
+
+
 def test_verifier_result_maps_into_feedback_tags() -> None:
     result = VerifierResult(passed=True, score=1.0, coverage=0.75, diagnostics={"x": 0.3})
     tags = result.as_tags()
@@ -177,6 +198,8 @@ def test_maxrl_config_validation_guards() -> None:
         MaxRLConfig(enabled=True, num_samples=0)
     with pytest.raises(ValueError, match="min_success_count must be >= 0"):
         MaxRLConfig(enabled=True, min_success_count=-1)
+    with pytest.raises(ValueError, match="min_success_count must be <= num_samples"):
+        MaxRLConfig(enabled=True, num_samples=2, min_success_count=3)
     with pytest.raises(ValueError, match="max_success_weight must be >= 0.0"):
         MaxRLConfig(enabled=True, max_success_weight=-0.1)
     with pytest.raises(ValueError, match="zero_success_kl_coeff must be >= 0.0"):

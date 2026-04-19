@@ -125,6 +125,8 @@ class MaxRLConfig:
             raise ValueError("min_success_count must be an integer")
         if self.min_success_count < 0:
             raise ValueError("min_success_count must be >= 0")
+        if self.min_success_count > self.num_samples:
+            raise ValueError("min_success_count must be <= num_samples")
 
         if not isinstance(self.max_success_weight, Real) or isinstance(
             self.max_success_weight, bool

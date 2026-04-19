@@ -64,16 +64,9 @@ def feedback_records(feedbacks: Iterable[GEPAFeedback], backend: str) -> List[Di
     normalized_backend = TrainerBackendConfig(backend=normalized_backend).validated_backend()
     records: List[Dict[str, Any]] = []
     for feedback in feedbacks:
-        records.append(
-            {
-                "backend": normalized_backend,
-                "rewards": dict(feedback.rewards),
-                "tags": dict(feedback.tags),
-                "verifier": dict(feedback.verifier),
-                "abstained": bool(feedback.abstained),
-                "meta": dict(feedback.meta),
-            }
-        )
+        payload = feedback.to_dict()
+        payload["backend"] = normalized_backend
+        records.append(payload)
     return records
 
 

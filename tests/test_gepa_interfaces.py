@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback, VerifierResult
 
 
@@ -56,10 +58,27 @@ def test_verifier_result_as_tags_sanitizes_invalid_values() -> None:
         coverage=float("inf"),
         diagnostics={"good": 0.2, "bad": "x"},
     )
-    tags = result.as_tags(success_key=123)  # type: ignore[arg-type]
+    tags = cast(Any, result.as_tags(success_key=cast(Any, 123)))
     assert tags["verifier_success"] == 0.9
     assert tags["123"] == 0.9
     assert tags["good"] == 0.2
     assert "bad" not in tags
     assert "verifier_confidence" not in tags
     assert "verifier_coverage" not in tags
+
+    malformed = cast(
+        Any,
+        VerifierResult(
+            passed="bad",
+            score="bad",
+            confidence=object(),
+            coverage="bad",
+            diagnostics={"ok": 1.0},
+        ),
+    )
+    malformed_tags = malformed.as_tags()
+    assert malformed_tags["ok"] == 1.0
+    assert "verifier_pass" not in malformed_tags
+    assert "verifier_score" not in malformed_tags
+    assert "verifier_confidence" not in malformed_tags
+    assert "verifier_coverage" not in malformed_tags
