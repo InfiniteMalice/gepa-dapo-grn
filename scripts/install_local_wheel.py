@@ -131,8 +131,9 @@ def _extract_string_attr_from_module_source(module_path: str, attr_name: str) ->
     candidates = [
         SRC_PATH / f"{relative_module_path}.py",
         SRC_PATH / relative_module_path / "__init__.py",
-        SRC_PATH / relative_module_path / "_version.py",
     ]
+    if relative_module_path.name != "_version":
+        candidates.append(SRC_PATH / relative_module_path / "_version.py")
 
     module_file = next((path for path in candidates if path.exists()), None)
     if module_file is None:

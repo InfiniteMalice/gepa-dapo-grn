@@ -87,10 +87,17 @@ class CurriculumTracker:
             return None
         return parsed
 
-    def _mean_reward(self, feedback: GEPAFeedback) -> float:
+    def _mean_reward(self, feedback: GEPAFeedback) -> Optional[float]:
         if not feedback.rewards:
-            return 0.0
-        return sum(float(v) for v in feedback.rewards.values()) / len(feedback.rewards)
+            return None
+        parsed_rewards = [
+            parsed
+            for parsed in (self._finite_or_none(value) for value in feedback.rewards.values())
+            if parsed is not None
+        ]
+        if not parsed_rewards:
+            return None
+        return sum(parsed_rewards) / len(parsed_rewards)
 
     def _verifier_pass(self, feedback: GEPAFeedback) -> float:
         if "verifier_success" in feedback.tags:
@@ -146,7 +153,8 @@ class CurriculumTracker:
             stats.verifier_ema[key] = _update_ema(current, parsed, self.decay)
 
         mean_reward = self._mean_reward(feedback)
-        stats.difficulty_ema = _update_ema(stats.difficulty_ema, 1.0 - mean_reward, self.decay)
+        if mean_reward is not None:
+            stats.difficulty_ema = _update_ema(stats.difficulty_ema, 1.0 - mean_reward, self.decay)
         stats.verifier_pass_rate_ema = _update_ema(
             stats.verifier_pass_rate_ema,
             self._verifier_pass(feedback),
@@ -158,7 +166,9 @@ class CurriculumTracker:
         )
         stats.count += 1
 
-        reward_saturated = mean_reward >= self.saturation_reward_threshold
+        reward_saturated = (
+            mean_reward is not None and mean_reward >= self.saturation_reward_threshold
+        )
         verifier_saturated = stats.verifier_pass_rate_ema >= self.saturation_pass_rate
         enough_samples = stats.count >= self.min_samples_for_saturation
         stats.saturated = enough_samples and (reward_saturated or verifier_saturated)

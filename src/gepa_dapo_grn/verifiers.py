@@ -27,12 +27,15 @@ class VerifierResult:
             final_key = "verifier_success"
         tags: Dict[str, float] = {}
         for key, value in self.diagnostics.items():
+            key_str = str(key).strip()
+            if not key_str or key_str == "None":
+                continue
             try:
                 numeric = float(value)
             except (TypeError, ValueError):
                 continue
             if math.isfinite(numeric):
-                tags[key] = numeric
+                tags[key_str] = numeric
         if self.passed is not None:
             try:
                 passed_value = float(self.passed)

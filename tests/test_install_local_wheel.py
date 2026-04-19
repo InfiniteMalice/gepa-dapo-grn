@@ -236,6 +236,15 @@ def test_load_project_version_reports_dynamic_attr_resolution_errors(tmp_path: P
         module._load_project_version(pyproject_path)
 
 
+def test_extract_dynamic_attr_from_module_path_ending_with_version() -> None:
+    module = _load_installer_module()
+    extracted = module._extract_string_attr_from_module_source(
+        "gepa_dapo_grn._version", "__version__"
+    )
+    assert isinstance(extracted, str)
+    assert extracted
+
+
 def test_load_project_name_supports_poetry_fallback(tmp_path: Path) -> None:
     module = _load_installer_module()
     pyproject_path = tmp_path / "pyproject.toml"

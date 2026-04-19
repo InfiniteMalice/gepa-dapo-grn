@@ -289,6 +289,20 @@ def test_maxrl_rejects_mismatched_batch_size_input_hint() -> None:
         trainer.train_step(batch, feedbacks)
 
 
+def test_maxrl_rejects_mismatched_input_tensor_leading_dimension() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=True))
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(2), "extra": torch.zeros(3, 1)},
+        actions=torch.zeros(2, dtype=torch.long),
+        task_ids=["task-a", "task-b"],
+    )
+    feedbacks = [GEPAFeedback(tags={"verifier_success": 1.0}) for _ in range(2)]
+    with pytest.raises(ValueError, match="batch.inputs\\['extra'\\] leading dimension 3"):
+        trainer.train_step(batch, feedbacks)
+
+
 def test_maxrl_accepts_verifier_pass_in_tags() -> None:
     policy = SimplePolicy()
     optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)

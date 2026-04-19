@@ -121,6 +121,20 @@ def test_curriculum_verifier_and_coverage_ignore_invalid_values() -> None:
     assert stats.coverage_ema == 0.5
 
 
+def test_curriculum_ignores_invalid_reward_and_difficulty_values() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    baseline_stats = tracker.update("task-a", GEPAFeedback())
+    baseline_difficulty = baseline_stats.difficulty_ema
+    stats = tracker.update(
+        "task-a",
+        GEPAFeedback(
+            rewards={"reward": float("nan"), "difficulty": float("nan")},
+            tags={"reward": float("nan"), "difficulty": float("nan")},
+        ),
+    )
+    assert stats.difficulty_ema == baseline_difficulty
+
+
 def test_simple_text_composer() -> None:
     composer = SimpleTextComposer(separator=" | ")
     output = composer.compose(["a", "b"], depth=2)

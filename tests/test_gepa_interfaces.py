@@ -82,3 +82,12 @@ def test_verifier_result_as_tags_sanitizes_invalid_values() -> None:
     assert "verifier_score" not in malformed_tags
     assert "verifier_confidence" not in malformed_tags
     assert "verifier_coverage" not in malformed_tags
+
+    diagnostics_keys = VerifierResult(
+        score=1.0,
+        diagnostics={None: 1.0, "   ": 2.0, " fine_key ": 3.0},  # type: ignore[dict-item]
+    )
+    diagnostics_tags = diagnostics_keys.as_tags()
+    assert "None" not in diagnostics_tags
+    assert "" not in diagnostics_tags
+    assert diagnostics_tags["fine_key"] == 3.0

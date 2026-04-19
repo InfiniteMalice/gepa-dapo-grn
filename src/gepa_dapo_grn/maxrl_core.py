@@ -125,6 +125,17 @@ class MaxRLTrainer:
                 raise ValueError("batch.inputs['batch_size'] must match batch.actions.shape[0]")
         else:
             inputs["batch_size"] = torch.tensor(batch_size, device=batch.actions.device)
+        expected_batch = int(batch_size)
+        for key, value in inputs.items():
+            if (
+                isinstance(value, torch.Tensor)
+                and value.ndim >= 1
+                and value.shape[0] != expected_batch
+            ):
+                raise ValueError(
+                    f"batch.inputs['{key}'] leading dimension {value.shape[0]} "
+                    f"does not match batch_size {expected_batch}"
+                )
 
         for task_id, feedback in zip(batch.task_ids, feedbacks):
             self.curriculum.update(task_id, feedback)

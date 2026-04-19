@@ -10,8 +10,11 @@ safety controls, verifier-first hooks, and optional Global Response Normalizatio
 - **GEPA-shaped but GEPA-agnostic**: feedback is structured reward/tag/verifier dictionaries.
 - **Supports DAPO or MaxRL + curriculum + safety + GRN** with conservative defaults and GRN
   disabled by default (`GRNConfig.enabled=False`). At runtime,
-  `SafetyController.adjust_grn_config(...)` can auto-enable GRN when measured risk exceeds
-  `grn_enable_threshold` (covered by safety controller tests for `adjust_grn_config`).
+  `SafetyController.adjust_grn_config(...)` can auto-enable GRN when
+  `max(0, risk_score - risk_tolerance) > grn_enable_threshold` (i.e., only positive excess risk
+  above `risk_tolerance` is considered; covered by safety controller tests for
+  `adjust_grn_config`). Be careful when `risk_tolerance != 0`, since misconfigured tolerances can
+  unexpectedly suppress or trigger GRN enablement.
 
 ## Backends
 
