@@ -77,23 +77,56 @@ class CurriculumTracker:
         self.max_depth = max_depth
         self.tasks: Dict[str, TaskStats] = {}
 
-    def _mean_reward(self, feedback: GEPAFeedback) -> float:
+    @staticmethod
+    def _finite_or_none(value: object) -> Optional[float]:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(parsed):
+            return None
+        return parsed
+
+    def _mean_reward(self, feedback: GEPAFeedback) -> Optional[float]:
         if not feedback.rewards:
-            return 0.0
-        return sum(float(v) for v in feedback.rewards.values()) / len(feedback.rewards)
+            return None
+        parsed_rewards = [
+            parsed
+            for parsed in (self._finite_or_none(value) for value in feedback.rewards.values())
+            if parsed is not None
+        ]
+        if not parsed_rewards:
+            return None
+        return sum(parsed_rewards) / len(parsed_rewards)
 
     def _verifier_pass(self, feedback: GEPAFeedback) -> float:
-        if "verifier_pass" in feedback.verifier:
-            return float(feedback.verifier["verifier_pass"])
+        if "verifier_success" in feedback.tags:
+            parsed = self._finite_or_none(feedback.tags["verifier_success"])
+            return parsed if parsed is not None else 0.0
         if "verifier_pass" in feedback.tags:
-            return float(feedback.tags["verifier_pass"])
+            parsed = self._finite_or_none(feedback.tags["verifier_pass"])
+            return parsed if parsed is not None else 0.0
+        if "verifier_success" in feedback.verifier:
+            parsed = self._finite_or_none(feedback.verifier["verifier_success"])
+            return parsed if parsed is not None else 0.0
+        if "verifier_pass" in feedback.verifier:
+            parsed = self._finite_or_none(feedback.verifier["verifier_pass"])
+            return parsed if parsed is not None else 0.0
         return 0.0
 
     def _coverage(self, feedback: GEPAFeedback) -> float:
+        if "verifier_coverage" in feedback.tags:
+            parsed = self._finite_or_none(feedback.tags["verifier_coverage"])
+            return parsed if parsed is not None else 1.0
+        if "coverage" in feedback.tags:
+            parsed = self._finite_or_none(feedback.tags["coverage"])
+            return parsed if parsed is not None else 1.0
         if "verifier_coverage" in feedback.verifier:
-            return float(feedback.verifier["verifier_coverage"])
+            parsed = self._finite_or_none(feedback.verifier["verifier_coverage"])
+            return parsed if parsed is not None else 1.0
         if "coverage" in feedback.verifier:
-            return float(feedback.verifier["coverage"])
+            parsed = self._finite_or_none(feedback.verifier["coverage"])
+            return parsed if parsed is not None else 1.0
         return 1.0
 
     def update(self, task_id: str, feedback: GEPAFeedback) -> TaskStats:
@@ -101,17 +134,27 @@ class CurriculumTracker:
 
         stats = self.tasks.setdefault(task_id, TaskStats())
         for key, value in feedback.rewards.items():
-            current = stats.reward_ema.get(key, float(value))
-            stats.reward_ema[key] = _update_ema(current, float(value), self.decay)
+            parsed = self._finite_or_none(value)
+            if parsed is None:
+                continue
+            current = stats.reward_ema.get(key, parsed)
+            stats.reward_ema[key] = _update_ema(current, parsed, self.decay)
         for key, value in feedback.tags.items():
-            current = stats.tag_ema.get(key, float(value))
-            stats.tag_ema[key] = _update_ema(current, float(value), self.decay)
+            parsed = self._finite_or_none(value)
+            if parsed is None:
+                continue
+            current = stats.tag_ema.get(key, parsed)
+            stats.tag_ema[key] = _update_ema(current, parsed, self.decay)
         for key, value in feedback.verifier.items():
-            current = stats.verifier_ema.get(key, float(value))
-            stats.verifier_ema[key] = _update_ema(current, float(value), self.decay)
+            parsed = self._finite_or_none(value)
+            if parsed is None:
+                continue
+            current = stats.verifier_ema.get(key, parsed)
+            stats.verifier_ema[key] = _update_ema(current, parsed, self.decay)
 
         mean_reward = self._mean_reward(feedback)
-        stats.difficulty_ema = _update_ema(stats.difficulty_ema, 1.0 - mean_reward, self.decay)
+        if mean_reward is not None:
+            stats.difficulty_ema = _update_ema(stats.difficulty_ema, 1.0 - mean_reward, self.decay)
         stats.verifier_pass_rate_ema = _update_ema(
             stats.verifier_pass_rate_ema,
             self._verifier_pass(feedback),
@@ -123,7 +166,9 @@ class CurriculumTracker:
         )
         stats.count += 1
 
-        reward_saturated = mean_reward >= self.saturation_reward_threshold
+        reward_saturated = (
+            mean_reward is not None and mean_reward >= self.saturation_reward_threshold
+        )
         verifier_saturated = stats.verifier_pass_rate_ema >= self.saturation_pass_rate
         enough_samples = stats.count >= self.min_samples_for_saturation
         stats.saturated = enough_samples and (reward_saturated or verifier_saturated)
