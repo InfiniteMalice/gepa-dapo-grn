@@ -214,6 +214,28 @@ def test_load_project_version_supports_poetry_fallback(tmp_path: Path) -> None:
     assert module._load_project_version(pyproject_path) == "9.9.9"
 
 
+def test_load_project_version_reports_dynamic_attr_resolution_errors(tmp_path: Path) -> None:
+    module = _load_installer_module()
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        "\n".join(
+            [
+                "[project]",
+                'name = "gepa-dapo-grn"',
+                'dynamic = ["version"]',
+                "",
+                "[tool.setuptools.dynamic]",
+                'version = { attr = "nonexistent.module.__version__" }',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="Failed to resolve dynamic project version"):
+        module._load_project_version(pyproject_path)
+
+
 def test_load_project_name_supports_poetry_fallback(tmp_path: Path) -> None:
     module = _load_installer_module()
     pyproject_path = tmp_path / "pyproject.toml"

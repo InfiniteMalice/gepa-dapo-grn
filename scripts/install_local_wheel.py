@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import shlex
 import subprocess
@@ -55,6 +56,34 @@ def _load_project_version(
         project_version = project_table.get("version")
         if isinstance(project_version, str) and project_version.strip():
             return project_version
+        dynamic_fields = project_table.get("dynamic")
+        if isinstance(dynamic_fields, list) and "version" in dynamic_fields:
+            tool_table = data.get("tool")
+            if isinstance(tool_table, dict):
+                setuptools_table = tool_table.get("setuptools")
+                if isinstance(setuptools_table, dict):
+                    dynamic_table = setuptools_table.get("dynamic")
+                    if isinstance(dynamic_table, dict):
+                        version_table = dynamic_table.get("version")
+                        if isinstance(version_table, dict):
+                            attr_path = version_table.get("attr")
+                            if isinstance(attr_path, str) and attr_path.strip():
+                                module_path, sep, attr_name = attr_path.rpartition(".")
+                                if sep and module_path and attr_name:
+                                    try:
+                                        attr_value = _extract_string_attr_from_module_source(
+                                            module_path=module_path,
+                                            attr_name=attr_name,
+                                        )
+                                    except Exception as exc:
+                                        raise RuntimeError(
+                                            "Failed to resolve dynamic project version from "
+                                            f"attr_path={attr_path!r} "
+                                            f"(module_path={module_path!r}, "
+                                            f"attr_name={attr_name!r}): {exc}"
+                                        ) from exc
+                                    if isinstance(attr_value, str) and attr_value.strip():
+                                        return attr_value
 
     tool_table = data.get("tool")
     if isinstance(tool_table, dict):
@@ -66,7 +95,7 @@ def _load_project_version(
 
     raise RuntimeError(
         "Failed to parse "
-        f"{pyproject_path}: pyproject.toml missing or invalid 'project.version' value."
+        f"{pyproject_path}: pyproject.toml missing or invalid project version metadata."
     )
 
 
@@ -94,6 +123,41 @@ def _load_project_name(
         "Failed to parse "
         f"{pyproject_path}: missing or invalid 'project.name' (or tool.poetry.name)."
     )
+
+
+def _extract_string_attr_from_module_source(module_path: str, attr_name: str) -> str:
+    module_parts = module_path.split(".")
+    relative_module_path = Path(*module_parts)
+    candidates = [
+        SRC_PATH / f"{relative_module_path}.py",
+        SRC_PATH / relative_module_path / "__init__.py",
+        SRC_PATH / relative_module_path / "_version.py",
+    ]
+
+    module_file = next((path for path in candidates if path.exists()), None)
+    if module_file is None:
+        raise FileNotFoundError(f"Could not locate module source for {module_path!r}")
+
+    parsed = ast.parse(module_file.read_text(encoding="utf-8"), filename=str(module_file))
+    for node in parsed.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == attr_name:
+                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                        return node.value.value
+                    raise RuntimeError(
+                        f"Attribute {attr_name!r} in {module_file} is not a string constant."
+                    )
+        if isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == attr_name:
+                value = node.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    return value.value
+                raise RuntimeError(
+                    f"Attribute {attr_name!r} in {module_file} is not a string constant."
+                )
+
+    raise AttributeError(f"Attribute {attr_name!r} not found in {module_file}")
 
 
 def _wheel_prefix_for_project_name(project_name: str) -> str:
