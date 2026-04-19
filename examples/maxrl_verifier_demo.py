@@ -37,7 +37,9 @@ class TinyPolicy(Policy):
         return torch.gather(log_probs, dim=-1, index=actions.unsqueeze(-1)).squeeze(-1)
 
     def clone(self) -> "TinyPolicy":
-        cloned = TinyPolicy(num_actions=self.logits.numel())
+        cloned = TinyPolicy(num_actions=self.logits.numel()).to(
+            device=self.logits.device, dtype=self.logits.dtype
+        )
         cloned.load_state_dict(self.state_dict())
         cloned.eval()
         for param in cloned.parameters():

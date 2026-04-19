@@ -96,6 +96,8 @@ class CurriculumTracker:
     def _coverage(self, feedback: GEPAFeedback) -> float:
         if "verifier_coverage" in feedback.tags:
             return float(feedback.tags["verifier_coverage"])
+        if "coverage" in feedback.tags:
+            return float(feedback.tags["coverage"])
         if "verifier_coverage" in feedback.verifier:
             return float(feedback.verifier["verifier_coverage"])
         if "coverage" in feedback.verifier:
