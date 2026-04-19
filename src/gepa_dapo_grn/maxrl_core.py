@@ -65,8 +65,10 @@ class MaxRLTrainer:
     def _refresh_reference(self, source_policy: Optional[Policy] = None) -> None:
         # Intentional order: clone after potential GRN wrapping so KL compares against the
         # post-wrapped structure used for MaxRL updates.
-        source = source_policy or self.policy
-        self.ref_policy = source.clone()
+        source = (source_policy or self.policy).clone()
+        if self.grn_config.enabled:
+            maybe_wrap_policy_heads(source, self.grn_config)
+        self.ref_policy = source
         self.ref_policy.eval()
         for parameter in self.ref_policy.parameters():
             parameter.requires_grad_(False)
@@ -84,6 +86,8 @@ class MaxRLTrainer:
             value = float(feedback.tags[self.config.success_tag_key])
         elif self.config.success_tag_key in feedback.verifier:
             value = float(feedback.verifier[self.config.success_tag_key])
+        elif "verifier_pass" in feedback.tags:
+            value = float(feedback.tags["verifier_pass"])
         elif "verifier_pass" in feedback.verifier:
             value = float(feedback.verifier["verifier_pass"])
         else:
@@ -101,6 +105,13 @@ class MaxRLTrainer:
         if len(batch.task_ids) != batch_size:
             raise ValueError("feedbacks and task_ids must align with batch size")
 
+        inputs = dict(batch.inputs)
+        if "batch_size" in inputs:
+            if int(inputs["batch_size"]) != batch_size:
+                raise ValueError("batch.inputs['batch_size'] must match batch.actions.shape[0]")
+        else:
+            inputs["batch_size"] = torch.tensor(batch_size, device=batch.actions.device)
+
         for task_id, feedback in zip(batch.task_ids, feedbacks):
             self.curriculum.update(task_id, feedback)
             self.safety_controller.update(feedback)
@@ -108,13 +119,6 @@ class MaxRLTrainer:
         self._sync_grn_wrapping()
         if self._ref_grn_enabled != self.grn_config.enabled:
             self._refresh_reference()
-
-        inputs = dict(batch.inputs)
-        if "batch_size" in inputs:
-            if int(inputs["batch_size"]) != batch_size:
-                raise ValueError("batch.inputs['batch_size'] must match batch.actions.shape[0]")
-        else:
-            inputs["batch_size"] = torch.tensor(batch_size, device=batch.actions.device)
 
         self.policy.train()
         logp_new = self.policy.logprobs(batch.actions, **inputs)
@@ -134,7 +138,7 @@ class MaxRLTrainer:
         insufficient_success = float(0 < success_count < self.config.min_success_count)
 
         kl_value = _approx_kl(logp_new, logp_ref)
-        kl_fallback = self.config.zero_success_kl_coeff * kl_value
+        kl_fallback = self.config.zero_success_kl_coeff * torch.clamp(kl_value, min=0.0)
 
         if success_count >= self.config.min_success_count:
             denom = float(

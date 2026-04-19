@@ -22,10 +22,14 @@ class TinyPolicy(Policy):
     def __init__(self, num_actions: int = 2) -> None:
         super().__init__()
         self.logits = nn.Parameter(torch.zeros(num_actions))
+        self.feature_proj = nn.Linear(1, num_actions)
 
     def forward(self, **inputs: torch.Tensor) -> PolicyOutput:
-        batch_size = int(inputs["batch_size"].item())
-        return PolicyOutput(logits=self.logits.repeat(batch_size, 1))
+        task_feature = inputs["task_feature"].float()
+        batch_size = task_feature.shape[0]
+        base_logits = self.logits.repeat(batch_size, 1)
+        conditioned_logits = base_logits + self.feature_proj(task_feature)
+        return PolicyOutput(logits=conditioned_logits)
 
     def logprobs(self, actions: torch.Tensor, **inputs: torch.Tensor) -> torch.Tensor:
         output = self.forward(**inputs)
@@ -62,13 +66,17 @@ def main() -> None:
     items: List[ToyItem] = [
         ToyItem(task_id=f"task-{i // 4}", expected_action=(i % 2)) for i in range(8)
     ]
+    task_feature = torch.tensor(
+        [[float(item.expected_action)] for item in items],
+        dtype=torch.float32,
+    )
     policy = TinyPolicy()
     optimizer = torch.optim.Adam(policy.parameters(), lr=0.1)
     trainer = MaxRLTrainer(policy, optimizer, config=MaxRLConfig(enabled=True, num_samples=4))
 
     for step in range(4):
         with torch.no_grad():
-            outputs = policy(batch_size=torch.tensor(len(items)))
+            outputs = policy(batch_size=torch.tensor(len(items)), task_feature=task_feature)
             probs = torch.softmax(outputs.logits, dim=-1)
             sampled_actions = torch.distributions.Categorical(probs=probs).sample()
         feedbacks: List[GEPAFeedback] = []
@@ -85,7 +93,7 @@ def main() -> None:
             task_ids.append(item.task_id)
 
         batch = MaxRLBatch(
-            inputs={"batch_size": torch.tensor(len(items))},
+            inputs={"batch_size": torch.tensor(len(items)), "task_feature": task_feature},
             actions=sampled_actions,
             task_ids=task_ids,
         )

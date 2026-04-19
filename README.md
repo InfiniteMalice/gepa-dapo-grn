@@ -9,7 +9,9 @@ safety controls, verifier-first hooks, and optional Global Response Normalizatio
 - **Standalone RL engine** with a stable public API under `gepa_dapo_grn.*`.
 - **GEPA-shaped but GEPA-agnostic**: feedback is structured reward/tag/verifier dictionaries.
 - **Supports DAPO or MaxRL + curriculum + safety + GRN** with conservative defaults and GRN
-  disabled unless explicitly enabled.
+  disabled by default (`GRNConfig.enabled=False`). At runtime,
+  `SafetyController.adjust_grn_config(...)` can auto-enable GRN when measured risk exceeds
+  `grn_enable_threshold` (covered by safety controller tests for `adjust_grn_config`).
 
 ## Backends
 

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from gepa_dapo_grn.config import TrainerBackendConfig
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -55,9 +56,12 @@ def summarize_feedback(feedbacks: Iterable[GEPAFeedback]) -> Dict[str, float]:
 def feedback_records(feedbacks: Iterable[GEPAFeedback], backend: str) -> List[Dict[str, Any]]:
     """Create JSONL-friendly records preserving full GEPA payloads."""
 
+    if not isinstance(backend, str):
+        raise ValueError("backend must be a string")
     normalized_backend = backend.strip().lower()
     if not normalized_backend:
         raise ValueError("backend label must not be empty")
+    normalized_backend = TrainerBackendConfig(backend=normalized_backend).validated_backend()
     records: List[Dict[str, Any]] = []
     for feedback in feedbacks:
         records.append(

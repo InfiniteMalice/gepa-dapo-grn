@@ -48,3 +48,13 @@ def test_feedback_records_multiple_and_abstained_preserved() -> None:
 def test_feedback_records_rejects_empty_backend_label() -> None:
     with pytest.raises(ValueError, match="backend label must not be empty"):
         feedback_records([GEPAFeedback()], backend="   ")
+
+
+def test_feedback_records_rejects_non_string_backend_label() -> None:
+    with pytest.raises(ValueError, match="backend must be a string"):
+        feedback_records([GEPAFeedback()], backend=123)  # type: ignore[arg-type]
+
+
+def test_feedback_records_rejects_unknown_backend_label() -> None:
+    with pytest.raises(ValueError, match="backend must be one of: 'dapo', 'maxrl'"):
+        feedback_records([GEPAFeedback()], backend="max-rl")

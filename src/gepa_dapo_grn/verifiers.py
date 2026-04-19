@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import field
 from typing import Any, Dict, Optional, Protocol
 
@@ -21,22 +22,37 @@ class VerifierResult:
     def as_tags(self, success_key: str = "verifier_success") -> Dict[str, float]:
         """Flatten verifier outputs into numeric tags."""
 
-        final_key = success_key.strip()
+        final_key = str(success_key).strip()
         if not final_key:
             final_key = "verifier_success"
-        tags = {key: float(value) for key, value in self.diagnostics.items()}
+        tags: Dict[str, float] = {}
+        for key, value in self.diagnostics.items():
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(numeric):
+                tags[key] = numeric
         if self.passed is not None:
-            tags["verifier_pass"] = float(self.passed)
-            tags[final_key] = float(self.passed)
-            tags["verifier_success"] = tags[final_key]
-        if self.score is not None:
-            tags["verifier_score"] = float(self.score)
-            if self.passed is None:
-                tags[final_key] = float(self.score)
+            passed_value = float(self.passed)
+            if math.isfinite(passed_value):
+                tags["verifier_pass"] = passed_value
+                tags[final_key] = passed_value
                 tags["verifier_success"] = tags[final_key]
+        if self.score is not None:
+            score_value = float(self.score)
+            if math.isfinite(score_value):
+                tags["verifier_score"] = score_value
+                if self.passed is None:
+                    tags[final_key] = score_value
+                    tags["verifier_success"] = tags[final_key]
         if self.confidence is not None:
-            tags["verifier_confidence"] = float(self.confidence)
-        tags["verifier_coverage"] = float(self.coverage)
+            confidence_value = float(self.confidence)
+            if math.isfinite(confidence_value):
+                tags["verifier_confidence"] = confidence_value
+        coverage_value = float(self.coverage)
+        if math.isfinite(coverage_value):
+            tags["verifier_coverage"] = coverage_value
         return tags
 
 

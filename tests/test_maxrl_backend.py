@@ -119,6 +119,13 @@ def test_backend_selection_factory() -> None:
             backend_config=TrainerBackendConfig(backend="maxrl"),
             reward_mixer=object(),  # type: ignore[arg-type]
         )
+    with pytest.raises(ValueError, match="reference_policy is unsupported by DAPOTrainer"):
+        make_trainer(
+            policy,
+            optimizer,
+            backend_config=TrainerBackendConfig(backend="dapo"),
+            reference_policy=SimplePolicy(),
+        )
     with pytest.raises(ValueError, match="requires maxrl_config.enabled=True"):
         make_trainer(
             policy,
@@ -255,3 +262,21 @@ def test_maxrl_rejects_mismatched_batch_size_input_hint() -> None:
     feedbacks = [GEPAFeedback(tags={"verifier_success": 1.0}) for _ in range(2)]
     with pytest.raises(ValueError, match="batch.inputs\\['batch_size'\\] must match"):
         trainer.train_step(batch, feedbacks)
+
+
+def test_maxrl_accepts_verifier_pass_in_tags() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=True))
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(2)},
+        actions=torch.zeros(2, dtype=torch.long),
+        task_ids=["task-a", "task-b"],
+    )
+    feedbacks = [
+        GEPAFeedback(tags={"verifier_pass": 1.0}),
+        GEPAFeedback(tags={"verifier_pass": 0.0}),
+    ]
+    result = trainer.train_step(batch, feedbacks)
+    assert torch.isfinite(result.loss)
+    assert result.metrics["maxrl/success_count"] == 1.0

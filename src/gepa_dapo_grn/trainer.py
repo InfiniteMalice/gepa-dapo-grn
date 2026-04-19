@@ -58,6 +58,10 @@ def make_trainer(
             safety_controller=safety_controller,
             reference_policy=reference_policy,
         )
+    if reference_policy is not None:
+        raise ValueError(
+            "Invalid config for backend='dapo': reference_policy is unsupported by DAPOTrainer"
+        )
     if maxrl_config is not None and maxrl_config.enabled:
         raise ValueError("Invalid config for backend='dapo': maxrl_config.enabled must be False")
     return DAPOTrainer(
