@@ -55,6 +55,62 @@ def test_curriculum_tracker_saturation_increases_composition_depth() -> None:
     assert stats.composition_depth >= 1
 
 
+def test_curriculum_prefers_tag_verifier_pass_over_legacy_verifier_field() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(tags={"verifier_pass": 1.0}, verifier={"verifier_pass": 0.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_accepts_legacy_verifier_success_field() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_accepts_verifier_success_in_tags() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(tags={"verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_verifier_precedence_legacy_success_over_verifier_pass() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_pass": 0.0, "verifier_success": 1.0})
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+
+
+def test_curriculum_coverage_prefers_tags_over_verifier_fields() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(
+        tags={"verifier_coverage": 0.9, "coverage": 0.8},
+        verifier={"verifier_coverage": 0.4, "coverage": 0.2},
+    )
+    stats = tracker.update("task-a", feedback)
+    assert stats.coverage_ema == 0.45
+
+
+def test_curriculum_coverage_uses_verifier_when_tags_absent() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(verifier={"verifier_coverage": 0.6, "coverage": 0.3})
+    stats = tracker.update("task-a", feedback)
+    assert stats.coverage_ema == 0.3
+
+
+def test_curriculum_coverage_uses_legacy_fallback_and_default() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    legacy_feedback = GEPAFeedback(verifier={"coverage": 0.2})
+    stats = tracker.update("task-a", legacy_feedback)
+    assert stats.coverage_ema == 0.1
+
+    default_feedback = GEPAFeedback()
+    stats = tracker.update("task-a", default_feedback)
+    assert stats.coverage_ema == 0.55
+
+
 def test_simple_text_composer() -> None:
     composer = SimpleTextComposer(separator=" | ")
     output = composer.compose(["a", "b"], depth=2)
