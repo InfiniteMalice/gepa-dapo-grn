@@ -111,6 +111,16 @@ def test_curriculum_coverage_uses_legacy_fallback_and_default() -> None:
     assert stats.coverage_ema == 0.55
 
 
+def test_curriculum_verifier_and_coverage_ignore_invalid_values() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    invalid_feedback = GEPAFeedback(
+        tags={"verifier_success": "bad", "verifier_coverage": float("nan")}
+    )
+    stats = tracker.update("task-a", invalid_feedback)
+    assert stats.verifier_pass_rate_ema == 0.0
+    assert stats.coverage_ema == 0.5
+
+
 def test_simple_text_composer() -> None:
     composer = SimpleTextComposer(separator=" | ")
     output = composer.compose(["a", "b"], depth=2)

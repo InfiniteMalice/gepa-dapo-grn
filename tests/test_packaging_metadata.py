@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -51,10 +52,12 @@ def test_project_version_matches_runtime_version() -> None:
     data = _load_pyproject()
     project = data["project"]
     assert project["dynamic"] == ["version"]
-    assert data["tool"]["setuptools"]["dynamic"]["version"]["attr"] == (
-        "gepa_dapo_grn._version.__version__"
-    )
-    assert _load_runtime_version()
+    attr_path = data["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+    assert attr_path == "gepa_dapo_grn._version.__version__"
+    module_path, _, attr_name = attr_path.rpartition(".")
+    imported = importlib.import_module(module_path)
+    attr_value = getattr(imported, attr_name)
+    assert attr_value == _load_runtime_version()
 
 
 def test_dependency_constraints_remain_release_safe() -> None:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import shlex
 import subprocess
@@ -70,13 +71,11 @@ def _load_project_version(
                                 module_path, sep, attr_name = attr_path.rpartition(".")
                                 if sep and module_path and attr_name:
                                     try:
-                                        module = __import__(module_path, fromlist=[attr_name])
-                                        attr_value = getattr(module, attr_name)
-                                    except (
-                                        ImportError,
-                                        ModuleNotFoundError,
-                                        AttributeError,
-                                    ) as exc:
+                                        attr_value = _extract_string_attr_from_module_source(
+                                            module_path=module_path,
+                                            attr_name=attr_name,
+                                        )
+                                    except Exception as exc:
                                         raise RuntimeError(
                                             "Failed to resolve dynamic project version from "
                                             f"attr_path={attr_path!r} "
@@ -124,6 +123,41 @@ def _load_project_name(
         "Failed to parse "
         f"{pyproject_path}: missing or invalid 'project.name' (or tool.poetry.name)."
     )
+
+
+def _extract_string_attr_from_module_source(module_path: str, attr_name: str) -> str:
+    module_parts = module_path.split(".")
+    relative_module_path = Path(*module_parts)
+    candidates = [
+        SRC_PATH / f"{relative_module_path}.py",
+        SRC_PATH / relative_module_path / "__init__.py",
+        SRC_PATH / relative_module_path / "_version.py",
+    ]
+
+    module_file = next((path for path in candidates if path.exists()), None)
+    if module_file is None:
+        raise FileNotFoundError(f"Could not locate module source for {module_path!r}")
+
+    parsed = ast.parse(module_file.read_text(encoding="utf-8"), filename=str(module_file))
+    for node in parsed.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == attr_name:
+                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                        return node.value.value
+                    raise RuntimeError(
+                        f"Attribute {attr_name!r} in {module_file} is not a string constant."
+                    )
+        if isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == attr_name:
+                value = node.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    return value.value
+                raise RuntimeError(
+                    f"Attribute {attr_name!r} in {module_file} is not a string constant."
+                )
+
+    raise AttributeError(f"Attribute {attr_name!r} not found in {module_file}")
 
 
 def _wheel_prefix_for_project_name(project_name: str) -> str:

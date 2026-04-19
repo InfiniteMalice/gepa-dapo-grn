@@ -16,6 +16,8 @@ from gepa_dapo_grn.grn import maybe_wrap_policy_heads, restore_policy_heads
 from gepa_dapo_grn.policy_interfaces import Policy
 from gepa_dapo_grn.safety_controller import SafetyController
 
+BACKEND_METRIC_FLAG = 1.0
+
 
 @dataclass
 class MaxRLBatch:
@@ -106,9 +108,13 @@ class MaxRLTrainer:
         if batch_size == 0 or len(feedbacks) == 0 or len(batch.task_ids) == 0:
             raise ValueError("batch is empty; cannot compute loss")
         if len(feedbacks) != batch_size:
-            raise ValueError("feedbacks and task_ids must align with batch size")
+            raise ValueError(
+                f"feedbacks length {len(feedbacks)} does not match batch_size {batch_size}"
+            )
         if len(batch.task_ids) != batch_size:
-            raise ValueError("feedbacks and task_ids must align with batch size")
+            raise ValueError(
+                f"task_ids length {len(batch.task_ids)} does not match batch_size {batch_size}"
+            )
 
         inputs = dict(batch.inputs)
         if "batch_size" in inputs:
@@ -182,7 +188,7 @@ class MaxRLTrainer:
         )
 
         metrics = {
-            "backend": 1.0,
+            "backend": BACKEND_METRIC_FLAG,  # backend-presence flag for dashboard grouping.
             "maxrl/objective": float((-mle_loss).item()),
             "maxrl/loss": float(total_loss.item()),
             "maxrl/success_count": float(success_count),

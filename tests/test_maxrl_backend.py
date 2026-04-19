@@ -170,6 +170,8 @@ def test_maxrl_preserves_constructor_reference_for_future_refreshes() -> None:
     with torch.no_grad():
         trainer.policy.logits_param.fill_(9.0)
     trainer.update_reference()
+    # update_reference() re-clones from the constructor-supplied _initial_reference_policy
+    # (logits -3.0), not from the mutated live trainer.policy logits (9.0).
     expected = torch.full_like(reference.logits_param, -3.0)
     assert torch.allclose(trainer.ref_policy.logits_param, expected)
 

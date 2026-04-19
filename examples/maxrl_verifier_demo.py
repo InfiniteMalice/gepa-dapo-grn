@@ -10,11 +10,11 @@ from torch import nn
 
 from gepa_dapo_grn import (
     GEPAFeedback,
+    MaxRLBatch,
     MaxRLConfig,
     MaxRLTrainer,
     VerifierResult,
 )
-from gepa_dapo_grn.maxrl_core import MaxRLBatch
 from gepa_dapo_grn.policy_interfaces import Policy, PolicyOutput
 
 
