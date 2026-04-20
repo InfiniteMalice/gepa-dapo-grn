@@ -108,7 +108,7 @@ jobs:
       (
       (inputs.publish_target == 'testpypi' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true))
-      || (inputs.publish_target == 'pypi' && (startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true))
+      || (inputs.publish_target == 'pypi' && startsWith(github.ref, 'refs/tags/v'))
       ))
     permissions:
       id-token: write
@@ -134,7 +134,7 @@ jobs:
     if: >
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
       || (github.event_name == 'workflow_dispatch' &&
-      (startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true) &&
+      startsWith(github.ref, 'refs/tags/v') &&
       inputs.publish_target == 'pypi')
     permissions:
       id-token: write
