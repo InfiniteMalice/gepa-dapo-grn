@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence
 
 from gepa_dapo_grn._compat import dataclass
 from gepa_dapo_grn._ema_helpers import _update_ema
+from gepa_dapo_grn._numeric_helpers import finite_or_none
 from gepa_dapo_grn.gepa_interfaces import GEPAFeedback
 
 
@@ -77,22 +78,12 @@ class CurriculumTracker:
         self.max_depth = max_depth
         self.tasks: Dict[str, TaskStats] = {}
 
-    @staticmethod
-    def _finite_or_none(value: object) -> Optional[float]:
-        try:
-            parsed = float(value)
-        except (TypeError, ValueError):
-            return None
-        if not math.isfinite(parsed):
-            return None
-        return parsed
-
     def _mean_reward(self, feedback: GEPAFeedback) -> Optional[float]:
         if not feedback.rewards:
             return None
         parsed_rewards = [
             parsed
-            for parsed in (self._finite_or_none(value) for value in feedback.rewards.values())
+            for parsed in (finite_or_none(value) for value in feedback.rewards.values())
             if parsed is not None
         ]
         if not parsed_rewards:
@@ -101,32 +92,40 @@ class CurriculumTracker:
 
     def _verifier_pass(self, feedback: GEPAFeedback) -> float:
         if "verifier_success" in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags["verifier_success"])
-            return parsed if parsed is not None else 0.0
+            parsed = finite_or_none(feedback.tags["verifier_success"])
+            if parsed is not None:
+                return parsed
         if "verifier_pass" in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags["verifier_pass"])
-            return parsed if parsed is not None else 0.0
+            parsed = finite_or_none(feedback.tags["verifier_pass"])
+            if parsed is not None:
+                return parsed
         if "verifier_success" in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier["verifier_success"])
-            return parsed if parsed is not None else 0.0
+            parsed = finite_or_none(feedback.verifier["verifier_success"])
+            if parsed is not None:
+                return parsed
         if "verifier_pass" in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier["verifier_pass"])
-            return parsed if parsed is not None else 0.0
+            parsed = finite_or_none(feedback.verifier["verifier_pass"])
+            if parsed is not None:
+                return parsed
         return 0.0
 
     def _coverage(self, feedback: GEPAFeedback) -> float:
         if "verifier_coverage" in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags["verifier_coverage"])
-            return parsed if parsed is not None else 1.0
+            parsed = finite_or_none(feedback.tags["verifier_coverage"])
+            if parsed is not None:
+                return parsed
         if "coverage" in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags["coverage"])
-            return parsed if parsed is not None else 1.0
+            parsed = finite_or_none(feedback.tags["coverage"])
+            if parsed is not None:
+                return parsed
         if "verifier_coverage" in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier["verifier_coverage"])
-            return parsed if parsed is not None else 1.0
+            parsed = finite_or_none(feedback.verifier["verifier_coverage"])
+            if parsed is not None:
+                return parsed
         if "coverage" in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier["coverage"])
-            return parsed if parsed is not None else 1.0
+            parsed = finite_or_none(feedback.verifier["coverage"])
+            if parsed is not None:
+                return parsed
         return 1.0
 
     def update(self, task_id: str, feedback: GEPAFeedback) -> TaskStats:
@@ -134,19 +133,19 @@ class CurriculumTracker:
 
         stats = self.tasks.setdefault(task_id, TaskStats())
         for key, value in feedback.rewards.items():
-            parsed = self._finite_or_none(value)
+            parsed = finite_or_none(value)
             if parsed is None:
                 continue
             current = stats.reward_ema.get(key, parsed)
             stats.reward_ema[key] = _update_ema(current, parsed, self.decay)
         for key, value in feedback.tags.items():
-            parsed = self._finite_or_none(value)
+            parsed = finite_or_none(value)
             if parsed is None:
                 continue
             current = stats.tag_ema.get(key, parsed)
             stats.tag_ema[key] = _update_ema(current, parsed, self.decay)
         for key, value in feedback.verifier.items():
-            parsed = self._finite_or_none(value)
+            parsed = finite_or_none(value)
             if parsed is None:
                 continue
             current = stats.verifier_ema.get(key, parsed)

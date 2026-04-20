@@ -121,6 +121,17 @@ def test_curriculum_verifier_and_coverage_ignore_invalid_values() -> None:
     assert stats.coverage_ema == 0.5
 
 
+def test_curriculum_continues_fallback_after_invalid_preferred_keys() -> None:
+    tracker = CurriculumTracker(decay=0.5)
+    feedback = GEPAFeedback(
+        tags={"verifier_success": "bad", "verifier_coverage": "bad"},
+        verifier={"verifier_pass": 1.0, "coverage": 0.4},
+    )
+    stats = tracker.update("task-a", feedback)
+    assert stats.verifier_pass_rate_ema == 0.5
+    assert stats.coverage_ema == 0.2
+
+
 def test_curriculum_ignores_invalid_reward_and_difficulty_values() -> None:
     tracker = CurriculumTracker(decay=0.5)
     baseline_stats = tracker.update("task-a", GEPAFeedback())

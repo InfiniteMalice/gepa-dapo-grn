@@ -319,3 +319,53 @@ def test_maxrl_accepts_verifier_pass_in_tags() -> None:
     result = trainer.train_step(batch, feedbacks)
     assert torch.isfinite(result.loss)
     assert result.metrics["maxrl/success_count"] == 1.0
+
+
+def test_maxrl_success_value_ignores_invalid_preferred_fields() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=True))
+    trainer.safety_controller.update = (  # type: ignore[method-assign]
+        lambda _feedback: trainer.safety_controller.state
+    )
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(2)},
+        actions=torch.zeros(2, dtype=torch.long),
+        task_ids=["task-a", "task-b"],
+    )
+    feedbacks = [
+        GEPAFeedback(
+            tags={"safe": 0.0},
+            verifier={"verifier_success": "bad", "verifier_pass": 1.0},
+        ),
+        GEPAFeedback(
+            tags={"safe": 0.0}, verifier={"verifier_success": float("nan"), "verifier_pass": 0.0}
+        ),
+    ]
+    result = trainer.train_step(batch, feedbacks)
+    assert torch.isfinite(result.loss)
+    assert result.metrics["maxrl/success_count"] == 1.0
+
+
+def test_maxrl_verifier_coverage_metric_ignores_invalid_values() -> None:
+    policy = SimplePolicy()
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-2)
+    trainer = MaxRLTrainer(policy=policy, optimizer=optimizer, config=MaxRLConfig(enabled=True))
+    trainer.safety_controller.update = (  # type: ignore[method-assign]
+        lambda _feedback: trainer.safety_controller.state
+    )
+    batch = MaxRLBatch(
+        inputs={"batch_size": torch.tensor(2)},
+        actions=torch.zeros(2, dtype=torch.long),
+        task_ids=["task-a", "task-b"],
+    )
+    feedbacks = [
+        GEPAFeedback(tags={"safe": 0.0}, verifier={"verifier_coverage": 0.7}),
+        GEPAFeedback(
+            tags={"verifier_coverage": float("inf"), "safe": 0.0},
+            verifier={"verifier_coverage": 0.9},
+        ),
+    ]
+    result = trainer.train_step(batch, feedbacks)
+    assert torch.isfinite(result.loss)
+    assert result.metrics["maxrl/verifier_coverage"] == 0.8

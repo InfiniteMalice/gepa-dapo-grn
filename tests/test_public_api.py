@@ -21,6 +21,7 @@ from gepa_dapo_grn import (
     SafetyController,
     SimpleTextComposer,
     TrainerBackendConfig,
+    Verifier,
     VerifierResult,
     make_trainer,
 )
@@ -64,6 +65,7 @@ def test_public_api_exports() -> None:
         GRNConfig,
         RewardMixerConfig,
         GEPAFeedback,
+        Verifier,
         VerifierResult,
         MaxRLBatch,
         MaxRLStepResult,

@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 import torch
 from torch import nn
 
+from gepa_dapo_grn._numeric_helpers import finite_or_none
 from gepa_dapo_grn.config import GRNConfig, MaxRLConfig
 from gepa_dapo_grn.curriculum import CurriculumTracker
 from gepa_dapo_grn.dapo_core import _approx_kl
@@ -89,15 +90,24 @@ class MaxRLTrainer:
             self._original_heads = {}
 
     def _success_value(self, feedback: GEPAFeedback) -> float:
+        value: Optional[float] = None
         if self.config.success_tag_key in feedback.tags:
-            value = float(feedback.tags[self.config.success_tag_key])
-        elif self.config.success_tag_key in feedback.verifier:
-            value = float(feedback.verifier[self.config.success_tag_key])
-        elif "verifier_pass" in feedback.tags:
-            value = float(feedback.tags["verifier_pass"])
-        elif "verifier_pass" in feedback.verifier:
-            value = float(feedback.verifier["verifier_pass"])
-        else:
+            parsed = finite_or_none(feedback.tags[self.config.success_tag_key])
+            if parsed is not None:
+                value = parsed
+        if value is None and self.config.success_tag_key in feedback.verifier:
+            parsed = finite_or_none(feedback.verifier[self.config.success_tag_key])
+            if parsed is not None:
+                value = parsed
+        if value is None and "verifier_pass" in feedback.tags:
+            parsed = finite_or_none(feedback.tags["verifier_pass"])
+            if parsed is not None:
+                value = parsed
+        if value is None and "verifier_pass" in feedback.verifier:
+            parsed = finite_or_none(feedback.verifier["verifier_pass"])
+            if parsed is not None:
+                value = parsed
+        if value is None:
             value = 0.0
         if self.config.use_binary_success_only:
             return 1.0 if value >= 0.5 else 0.0
@@ -192,7 +202,14 @@ class MaxRLTrainer:
         for task_id, feedback, success in zip(batch.task_ids, feedbacks, success_weights.tolist()):
             task_groups.setdefault(task_id, []).append(float(success))
             verifier_coverage = feedback.verifier.get("verifier_coverage", 1.0)
-            coverage_values.append(float(feedback.tags.get("verifier_coverage", verifier_coverage)))
+            fallback_coverage = finite_or_none(verifier_coverage)
+            if fallback_coverage is None:
+                fallback_coverage = 1.0
+            raw_coverage = feedback.tags.get("verifier_coverage", verifier_coverage)
+            parsed_coverage = finite_or_none(raw_coverage)
+            coverage_values.append(
+                parsed_coverage if parsed_coverage is not None else float(fallback_coverage)
+            )
         saturated_tasks = sum(
             int(sum(values) >= 1.0 and len(values) >= self.config.num_samples)
             for values in task_groups.values()

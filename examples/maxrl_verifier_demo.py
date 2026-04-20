@@ -78,7 +78,7 @@ def main() -> None:
 
     for step in range(4):
         with torch.no_grad():
-            outputs = policy(batch_size=torch.tensor(len(items)), task_feature=task_feature)
+            outputs = policy(task_feature=task_feature)
             probs = torch.softmax(outputs.logits, dim=-1)
             sampled_actions = torch.distributions.Categorical(probs=probs).sample()
         feedbacks: List[GEPAFeedback] = []
@@ -100,9 +100,10 @@ def main() -> None:
             task_ids=task_ids,
         )
         result = trainer.train_step(batch, feedbacks)
+        success_rate = result.metrics.get('maxrl/success_rate', float('nan'))
         print(
             f"step={step} loss={result.loss.item():.4f} "
-            f"success_rate={result.metrics['maxrl/success_rate']:.3f}"
+            f"success_rate={success_rate:.3f}"
         )
 
 

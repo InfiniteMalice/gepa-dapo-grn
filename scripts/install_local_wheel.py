@@ -127,6 +127,8 @@ def _load_project_name(
 
 def _extract_string_attr_from_module_source(module_path: str, attr_name: str) -> str:
     module_parts = module_path.split(".")
+    if not module_parts or any(not part or not part.isidentifier() for part in module_parts):
+        raise ValueError(f"Invalid module path for dynamic version resolution: {module_path!r}")
     relative_module_path = Path(*module_parts)
     candidates = [
         SRC_PATH / f"{relative_module_path}.py",
@@ -135,30 +137,31 @@ def _extract_string_attr_from_module_source(module_path: str, attr_name: str) ->
     if relative_module_path.name != "_version":
         candidates.append(SRC_PATH / relative_module_path / "_version.py")
 
-    module_file = next((path for path in candidates if path.exists()), None)
-    if module_file is None:
+    existing_candidates = [path for path in candidates if path.exists()]
+    if not existing_candidates:
         raise FileNotFoundError(f"Could not locate module source for {module_path!r}")
 
-    parsed = ast.parse(module_file.read_text(encoding="utf-8"), filename=str(module_file))
-    for node in parsed.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == attr_name:
-                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                        return node.value.value
+    for module_file in existing_candidates:
+        parsed = ast.parse(module_file.read_text(encoding="utf-8"), filename=str(module_file))
+        for node in parsed.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == attr_name:
+                        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                            return node.value.value
+                        raise RuntimeError(
+                            f"Attribute {attr_name!r} in {module_file} is not a string constant."
+                        )
+            if isinstance(node, ast.AnnAssign):
+                if isinstance(node.target, ast.Name) and node.target.id == attr_name:
+                    value = node.value
+                    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                        return value.value
                     raise RuntimeError(
                         f"Attribute {attr_name!r} in {module_file} is not a string constant."
                     )
-        if isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == attr_name:
-                value = node.value
-                if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                    return value.value
-                raise RuntimeError(
-                    f"Attribute {attr_name!r} in {module_file} is not a string constant."
-                )
 
-    raise AttributeError(f"Attribute {attr_name!r} not found in {module_file}")
+    raise AttributeError(f"Attribute {attr_name!r} not found in any of {existing_candidates}")
 
 
 def _wheel_prefix_for_project_name(project_name: str) -> str:
