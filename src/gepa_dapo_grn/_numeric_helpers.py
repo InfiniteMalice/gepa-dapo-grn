@@ -11,7 +11,7 @@ def finite_or_none(value: object) -> Optional[float]:
 
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     if not math.isfinite(parsed):
         return None

@@ -10,11 +10,11 @@ safety controls, verifier-first hooks, and optional Global Response Normalizatio
 - **GEPA-shaped but GEPA-agnostic**: feedback is structured reward/tag/verifier dictionaries.
 - **Supports DAPO or MaxRL + curriculum + safety + GRN** with conservative defaults and GRN
   disabled by default (`GRNConfig.enabled=False`). At runtime,
-  `SafetyController.adjust_grn_config(...)` can auto-enable GRN when
-  `max(0, risk_score - risk_tolerance) > grn_enable_threshold` (i.e., only positive excess risk
-  above `risk_tolerance` is considered; covered by safety controller tests for
-  `adjust_grn_config`). Be careful when `risk_tolerance != 0`, since misconfigured tolerances can
-  unexpectedly suppress or trigger GRN enablement.
+  `SafetyController.adjust_grn_config(...)` (and internally `SafetyController._apply_grn_adjustment`)
+  can auto-enable GRN when excess risk (`max(0, risk_score - risk_tolerance)`) exceeds `grn_enable_threshold`.
+  It is recommended to use `risk_tolerance=0.0` (the default) for straightforward behavior. Using a
+  nonzero tolerance can suppress triggering; for example, a `risk_score` of 0.6 with a `risk_tolerance`
+  of 0.2 yields an excess risk of 0.4.
 
 ## Backends
 
@@ -132,6 +132,7 @@ try:
 except ImportError:
     import tomli as toml
 import re
+from packaging.version import Version, InvalidVersion
 
 data = toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
 project = data.get('project', {})
@@ -141,12 +142,21 @@ if isinstance(version, str) and version.strip():
 else:
     # Dynamic version fallback: read built artifact name from dist.
     # Expect files like gepa_dapo_grn-0.3.0-py3-none-any.whl
-    wheel_names = sorted(Path('dist').glob('gepa_dapo_grn-*.whl'))
+    wheel_names = list(Path('dist').glob('gepa_dapo_grn-*.whl'))
     if not wheel_names:
         raise SystemExit("No wheel found in dist for dynamic version resolution")
-    match = re.match(r"gepa_dapo_grn-([^-]+)-", wheel_names[-1].name)
-    if not match:
-        raise SystemExit(f"Unable to parse version from wheel name: {wheel_names[-1].name}")
+    
+    def get_version(path):
+        match = re.match(r"gepa_dapo_grn-([^-]+)-", path.name)
+        if not match:
+            raise SystemExit(f"Unable to parse version from wheel name: {path.name}")
+        try:
+            return Version(match.group(1))
+        except InvalidVersion:
+            raise SystemExit(f"Invalid semantic version in wheel name: {path.name}")
+
+    newest_wheel = max(wheel_names, key=get_version)
+    match = re.match(r"gepa_dapo_grn-([^-]+)-", newest_wheel.name)
     print(match.group(1))
 PY2
 )
