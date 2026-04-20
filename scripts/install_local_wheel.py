@@ -127,6 +127,8 @@ def _load_project_name(
 
 def _extract_string_attr_from_module_source(module_path: str, attr_name: str) -> str:
     module_parts = module_path.split(".")
+    if not module_parts or any(not part or not part.isidentifier() for part in module_parts):
+        raise ValueError(f"Invalid module path for dynamic version resolution: {module_path!r}")
     relative_module_path = Path(*module_parts)
     candidates = [
         SRC_PATH / f"{relative_module_path}.py",

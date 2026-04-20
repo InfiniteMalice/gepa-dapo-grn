@@ -143,6 +143,38 @@ jobs:
           name: python-dist
           path: dist
 
+      - name: Validate tag matches artifact version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          ref = os.environ["GITHUB_REF"]
+          tag = ref.rsplit("/", 1)[-1]
+          if not tag.startswith("v"):
+              raise SystemExit(f"Expected version tag ref, got {ref!r}")
+          tag_version = tag[1:]
+
+          wheel = next(iter(sorted(Path("dist").glob("gepa_dapo_grn-*.whl"))), None)
+          if wheel is None:
+              raise SystemExit("No wheel found in dist/ for version validation")
+          match = re.match(r"gepa_dapo_grn-([^-]+)-", wheel.name)
+          if match is None:
+              raise SystemExit(f"Unable to parse version from wheel filename: {wheel.name}")
+          artifact_version = match.group(1)
+
+          if artifact_version != tag_version:
+              raise SystemExit(
+                  f"Tag version {tag_version!r} does not match built artifact version "
+                  f"{artifact_version!r}"
+              )
+          print(f"Tag and artifact versions match: {tag_version}")
+          PY
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

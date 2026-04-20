@@ -131,9 +131,23 @@ try:
     import tomllib as toml
 except ImportError:
     import tomli as toml
+import re
 
 data = toml.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
-print(data['project']['version'])
+project = data.get('project', {})
+version = project.get('version')
+if isinstance(version, str) and version.strip():
+    print(version.strip())
+else:
+    # Dynamic version fallback: read built artifact name from dist.
+    # Expect files like gepa_dapo_grn-0.3.0-py3-none-any.whl
+    wheel_names = sorted(Path('dist').glob('gepa_dapo_grn-*.whl'))
+    if not wheel_names:
+        raise SystemExit("No wheel found in dist for dynamic version resolution")
+    match = re.match(r"gepa_dapo_grn-([^-]+)-", wheel_names[-1].name)
+    if not match:
+        raise SystemExit(f"Unable to parse version from wheel name: {wheel_names[-1].name}")
+    print(match.group(1))
 PY2
 )
 python scripts/validate_dist_metadata.py \

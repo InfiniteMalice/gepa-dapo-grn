@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import torch
 from torch import nn
 
+from gepa_dapo_grn._numeric_helpers import finite_or_none
 from gepa_dapo_grn.config import GRNConfig, MaxRLConfig
 from gepa_dapo_grn.curriculum import CurriculumTracker
 from gepa_dapo_grn.dapo_core import _approx_kl
@@ -89,32 +89,22 @@ class MaxRLTrainer:
             restore_policy_heads(self.policy, self._original_heads)
             self._original_heads = {}
 
-    @staticmethod
-    def _finite_or_none(value: object) -> Optional[float]:
-        try:
-            parsed = float(value)
-        except (TypeError, ValueError):
-            return None
-        if not math.isfinite(parsed):
-            return None
-        return parsed
-
     def _success_value(self, feedback: GEPAFeedback) -> float:
         value: Optional[float] = None
         if self.config.success_tag_key in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags[self.config.success_tag_key])
+            parsed = finite_or_none(feedback.tags[self.config.success_tag_key])
             if parsed is not None:
                 value = parsed
         if value is None and self.config.success_tag_key in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier[self.config.success_tag_key])
+            parsed = finite_or_none(feedback.verifier[self.config.success_tag_key])
             if parsed is not None:
                 value = parsed
         if value is None and "verifier_pass" in feedback.tags:
-            parsed = self._finite_or_none(feedback.tags["verifier_pass"])
+            parsed = finite_or_none(feedback.tags["verifier_pass"])
             if parsed is not None:
                 value = parsed
         if value is None and "verifier_pass" in feedback.verifier:
-            parsed = self._finite_or_none(feedback.verifier["verifier_pass"])
+            parsed = finite_or_none(feedback.verifier["verifier_pass"])
             if parsed is not None:
                 value = parsed
         if value is None:
@@ -212,11 +202,11 @@ class MaxRLTrainer:
         for task_id, feedback, success in zip(batch.task_ids, feedbacks, success_weights.tolist()):
             task_groups.setdefault(task_id, []).append(float(success))
             verifier_coverage = feedback.verifier.get("verifier_coverage", 1.0)
-            fallback_coverage = self._finite_or_none(verifier_coverage)
+            fallback_coverage = finite_or_none(verifier_coverage)
             if fallback_coverage is None:
                 fallback_coverage = 1.0
             raw_coverage = feedback.tags.get("verifier_coverage", verifier_coverage)
-            parsed_coverage = self._finite_or_none(raw_coverage)
+            parsed_coverage = finite_or_none(raw_coverage)
             coverage_values.append(
                 parsed_coverage if parsed_coverage is not None else float(fallback_coverage)
             )

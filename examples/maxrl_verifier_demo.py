@@ -78,7 +78,7 @@ def main() -> None:
 
     for step in range(4):
         with torch.no_grad():
-            outputs = policy(batch_size=torch.tensor(len(items)), task_feature=task_feature)
+            outputs = policy(task_feature=task_feature)
             probs = torch.softmax(outputs.logits, dim=-1)
             sampled_actions = torch.distributions.Categorical(probs=probs).sample()
         feedbacks: List[GEPAFeedback] = []

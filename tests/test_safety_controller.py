@@ -47,6 +47,12 @@ def test_adjust_grn_config_maxrl_path_threshold_and_baseline_behavior() -> None:
     controller.adjust_grn_config(grn_config)
     assert grn_config.enabled is False
 
+    controller._risk_score = (  # type: ignore[method-assign]
+        lambda: controller.grn_enable_threshold + controller.risk_tolerance
+    )
+    controller.adjust_grn_config(grn_config)
+    assert grn_config.enabled is False
+
     controller._risk_score = lambda: 0.9  # type: ignore[method-assign]
     controller.adjust_grn_config(grn_config)
     assert grn_config.enabled is True
