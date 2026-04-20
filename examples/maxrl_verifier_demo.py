@@ -100,11 +100,8 @@ def main() -> None:
             task_ids=task_ids,
         )
         result = trainer.train_step(batch, feedbacks)
-        success_rate = result.metrics.get('maxrl/success_rate', float('nan'))
-        print(
-            f"step={step} loss={result.loss.item():.4f} "
-            f"success_rate={success_rate:.3f}"
-        )
+        success_rate = result.metrics.get("maxrl/success_rate", float("nan"))
+        print(f"step={step} loss={result.loss.item():.4f} success_rate={success_rate:.3f}")
 
 
 if __name__ == "__main__":
