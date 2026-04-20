@@ -8,7 +8,6 @@ from typing import Optional
 
 def finite_or_none(value: object) -> Optional[float]:
     """Return finite float(value) or None when conversion fails/non-finite."""
-
     try:
         parsed = float(value)
     except (TypeError, ValueError, OverflowError):

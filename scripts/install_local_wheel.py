@@ -147,8 +147,9 @@ def _extract_string_attr_from_module_source(module_path: str, attr_name: str) ->
             if isinstance(node, ast.Assign):
                 for target in node.targets:
                     if isinstance(target, ast.Name) and target.id == attr_name:
-                        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                            return node.value.value
+                        value = node.value
+                        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                            return value.value
                         raise RuntimeError(
                             f"Attribute {attr_name!r} in {module_file} is not a string constant."
                         )
