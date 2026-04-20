@@ -17,6 +17,11 @@ on:
           - none
           - testpypi
           - pypi
+      allow_dev_branch:
+        description: "Allow publishing from a non-main/non-tag dev branch"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   test:
@@ -98,12 +103,12 @@ jobs:
     needs: [lint, build-and-install-wheel]
     if: >
       (github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/codex/add-maxrl-backend-to-gepa-dapo-grn-hydcg3'))
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
       || (github.event_name == 'workflow_dispatch' &&
       (
       (inputs.publish_target == 'testpypi' &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/codex/add-maxrl-backend-to-gepa-dapo-grn-hydcg3'))
-      || (inputs.publish_target == 'pypi' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/codex/add-maxrl-backend-to-gepa-dapo-grn-hydcg3'))
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true))
+      || (inputs.publish_target == 'pypi' && (startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true))
       ))
     permissions:
       id-token: write
@@ -127,9 +132,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, build-and-install-wheel, publish-test-pypi]
     if: >
-      (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/codex/add-maxrl-backend-to-gepa-dapo-grn-hydcg3'))
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
       || (github.event_name == 'workflow_dispatch' &&
-      (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/codex/add-maxrl-backend-to-gepa-dapo-grn-hydcg3') &&
+      (startsWith(github.ref, 'refs/tags/v') || inputs.allow_dev_branch == true) &&
       inputs.publish_target == 'pypi')
     permissions:
       id-token: write
