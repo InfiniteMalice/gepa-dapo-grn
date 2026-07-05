@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Dict
+from typing import Any, Dict
 
 from gepa_dapo_grn._compat import dataclass
 from gepa_dapo_grn.verifiers import Verifier, VerifierResult  # noqa: F401
@@ -24,7 +24,7 @@ class GEPAFeedback:
     rewards: Dict[str, float] = field(default_factory=dict)
     tags: Dict[str, float] = field(default_factory=dict)
     verifier: Dict[str, float] = field(default_factory=dict)
-    meta: Dict[str, str] = field(default_factory=dict)
+    meta: Dict[str, Any] = field(default_factory=dict)
     abstained: bool = False
 
     def to_dict(self) -> Dict[str, object]:
