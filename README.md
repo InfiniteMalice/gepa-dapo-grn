@@ -66,6 +66,22 @@ dapo_trainer = make_trainer(
   modules via `include_modules`/`exclude_modules`, and keep probe/interpretability modules
   unwrapped unless explicitly included.
 
+## Optional Graph-Active-DAPO
+
+The package also includes optional graph-native feedback and Active-GRPO-style adaptive references.
+These modules can be used independently or combined through `GraphActiveDapoTrainer`.
+
+- `gepa_dapo_grn.graph` scores public graph artifacts: claims, evidence links, mechanisms,
+  assumptions, constraints, contradictions, and answer alignment.
+- `gepa_dapo_grn.active_grpo` tracks per-prompt references, chooses imitate/mixed/reinforce modes,
+  and promotes policy candidates only through strict external-verifier and safety gates.
+- Hidden chain-of-thought is not stored or rewarded. The graph layer uses public artifacts only:
+  graph JSON, public assumptions, claims, evidence, tests, answer summaries, and verifier outputs.
+- Reference promotion is disabled by default and cannot rely on model self-score alone when external
+  verification is required.
+
+See `docs/graph_active_dapo.md` and the `examples/graph_*demo.py` files for minimal usage.
+
 ## Install
 
 ```bash
